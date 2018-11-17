@@ -31,10 +31,38 @@
 					<p>Esta aplicación proporcina información sobre la temperatura y la humedad recogidas por el sensor am2320 conectado a la RaspberryPi 3 Model B</p>
 				</div>
 				</br>
-				<div class="btn">
-					<a href="menu" class="botonEnlace"><span>Entrar</span></a>
-					<div class="dot"></div>
+				<div>
+					{% if accesGranted == False %}
+						<form name="valores" action="" method="post">
+							<fieldset>
+								<div>
+									<label for="user">User</label>
+									<input type="text" name="user">
+								</div>
+								<div>
+									<label for="passwd">Password</label>
+									<input type="password" name="passwd">
+								</div>
+								{% if warningAccess == True %}
+									<p style="color:red; font-size:10px;">Usuario o contraseña no válida</p>
+								{% endif %}
+								<div class="btn">
+									<span><input class="botonEnlace" type="submit" value="Verificar"></span></a>
+									<div class="dot"></div>
+								</div>
+								</br>
+							</fieldset>
+						</form> 
+					{% endif %}
+					{% if accesGranted == True %}
+						<div class="btn">
+							<a href="menu" class="botonEnlace"><span>Entrar</span></a>
+							<div class="dot"></div>
+						</div>	
+					{% endif %}
 				</div>
+				</br>
+				
 				<br/>	
 			</div>
 		</div>

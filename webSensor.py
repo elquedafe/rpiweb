@@ -93,6 +93,7 @@ def barraHum(h):
 @app.route('/', methods = ['POST', 'GET'])
 def index():
 	global accesGranted
+	print(accesGranted)
 	if request.method == 'POST':
 		print('***POST***')
 		user = request.form.get('user')
@@ -101,10 +102,22 @@ def index():
 		accesGranted=uH.getAccess(user, passwd)
 		print(accesGranted)
 		if (accesGranted):
-			return render_template('menu.html')
+			templateData = {
+			'warningAccess' : False,
+			'accesGranted' : accesGranted
+			}
+			return render_template('index.html', **templateData)
 		else:
-			return render_template('index.html', warningAccess=True)
-	return render_template('index.html', warningAccess=False)
+			templateData = {
+			'warningAccess' : True,
+			'accesGranted' : accesGranted
+			}
+			return render_template('index.html', **templateData)
+	templateData = {
+			'warningAccess' : False,
+			'accesGranted' : accesGranted
+	}
+	return render_template('index.html', **templateData)
 
 @app.route('/menu')
 def menu():
@@ -320,7 +333,7 @@ def handleReader(lectura):
 			tableTemp = barraTemp(t)
 		if (h != None):
 			tableHum = barraHum(h)
-			
+
 		templateData = {
 			'temp' : t,
 			'hum' : h,
