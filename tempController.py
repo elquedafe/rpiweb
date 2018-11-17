@@ -107,6 +107,7 @@ def robotThread(cond):
 # Logica de comandos de Telegram
 def lecturaMensajesBot(msg):
 	global bot
+	global collected
 	#telGroup = int(telGroup)
 	firstName = msg['from']['first_name']
 	idUser = msg['from']['id']
@@ -118,8 +119,12 @@ def lecturaMensajesBot(msg):
 	if(texto[0] == '/'):
 		if (texto == '/on_calefaccion' or texto == '/on_calefaccion@mayordomoetsist_bot'):
 			bot.sendMessage(telGroup, 'Calefaccion encendida por '+ persona)
+			collected = 'x00x01'
+			robotStateChange()
 		elif (texto == '/off_calefaccion' or texto == '/off_calefaccion@mayordomoetsist_bot'):
 			bot.sendMessage(telGroup, 'Calefaccion apagada por '+ persona)
+			collected = 'x00x02'
+			robotStateChange()
 		elif (texto == '/obtener_estadisticas' or texto == 'obtener_estadisticas@mayordomoetsist_bot'):
 			try:
 				bot.sendPhoto(telGroup, open('templates/img/temperatura.png','rb'))
