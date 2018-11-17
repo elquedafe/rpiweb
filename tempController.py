@@ -4,45 +4,59 @@ import threading
 import datetime
 import time
 
-import configparser
+import fileHandler
 import proxy
 from gpiozero import LED
 
 import telepot
 
 
-def serverThread():
+def serverThread(cond):
 	socket_s = socket.socket()
 	socket_s.bind(('localhost', 65000))
 	socket_s.listen(1)
-	conn, addr = socket_s.accept()
-	while 1:
-		data = conn.recv(1024)
-		if data=='on' or data=='off':
-			lock.adquire()
-			collected = data
-			lock.release()
-			break
-	conn.close()	
+	while (1):
+		conn, addr = socket_s.accept()
+		global collected
 
-def robotThread(mode):
+		try:
+			while (1):
+				data = conn.recv(1024)
+				if (data):
+					cond.acquire()
+					collected = data
+					cond.notify()
+					cond.release()
+					break;
+		except Exception as e:
+			print(e)
+		finally:
+			conn.close()	
+
+def robotThread(cond):
+	global collected
+	global telToken
+	global telGroup
 	#var to write events
 	wEvent = open("eventos.txt", "a")
 	#creating sensor
 	sensor = proxy.PROXY()
-	#creating led
-	led = LED(18)
+	#led
+	global led
 	if (mode == 'automatico'):
 		#var to send messages
-		bot = telepot.Bot("724236915:AAGB0CVTa9tWxjI66Lk4JEWioR_hPoXwdEM")
+		bot = telepot.Bot(telToken)
 		
 		#notification control
 		notification = False
+		cond.acquire()
 		while collected == None:
+			cond.notify()
+			cond.release()
 			temp = sensor.leerTem()
 			if (tempMax > temp):
 				if (notification == False):
-					bot.sendMessage(-253583374, 'se enciende la calefaccion --- temperatura actual: '+str(temp)+'ºC'+"\n")
+					bot.sendMessage(telGroup+0, 'se enciende la calefaccion --- temperatura actual: '+str(temp)+'ºC'+"\n")
 					notification = True
 					led.on()
 					wEvent.write(format(datetime.datetime.now())+"\t"+str(temp)+"\tencendido")
@@ -51,50 +65,78 @@ def robotThread(mode):
 				if notification:
 					led.off()
 					wEvent.write(format(datetime.datetime.now())+"\t"+str(temp)+"\tapagado")
-					bot.sendMessage(-253583374, 'se apaga la calefaccion --- temperatura actual: '+str(temp)+'ºC'+"\n")
+					bot.sendMessage(telGroup+0, 'se apaga la calefaccion --- temperatura actual: '+str(temp)+'ºC'+"\n")
 					notification = False
 			time.sleep(lec);
+			cond.acquire()
+
+		cond.notify()
+		cond.release()
 	else:
+		cond.acquire()
 		while collected == None:
-			notification = False
-		if collected == 'on':
+			cond.wait()
+
+		if collected == b'x00x01':
 			led.on()
-		else:
+		elif collected == b'x00x02':
 			led.off()
+
+		#reset collected data
+		collected = None
+		#collected = None
+		cond.release()
 	#closing sensor at the end
 	sensor.close()
 
+tempMin = None
+tempMax = None
+hume = None
+telToken = None
+telGroup = None
+email = None
+lec = None
+mode = None
+collected = None
+led = LED(18)
 
 def main (args):
 	#var to read from config file
-	config = configparser.ConfigParser()
+	fileH = fileHandler.FILEHANDLER()
 
 	try:
-		serv = threading.Thread(target=serverThread)
+		global collected
+		global cond
+		cond = threading.Condition()
+
+		serv = threading.Thread(target=serverThread, args=(cond,))
 		serv.start()
 		while 1:
-			config.read("control.ini")
 			
 			#reading config parameters
 			global tempMin
-			tempMin = config.getfloat('Parameters', 'TempMin')
+			tempMin = float(fileH.readParam('TempMin'))
 			global tempMax
-			tempMax = config.getfloat('Parameters', 'TempMax')
+			tempMax = float(fileH.readParam('TempMax'))
 			global hume
-			hume = config.getfloat('Parameters', 'Hume')
+			hume = float(fileH.readParam('Hume'))
 			global email
-			email = config['Parameters']['Email']
+			email = fileH.readParam('Email')
+			global telToken
+			telToken = fileH.readParam('TelegramToken')
+			global telGroup
+			telGroup = fileH.readParam('TelegramIDGrupo')
 			global lec
-			lec = config.getfloat('Parameters', 'IntervaloLectura')
+			lec = float(fileH.readParam('IntervaloLectura'))
 			global mode
-			mode = config['Parameters']['Modo']
-			global collected
-			collected = None
+			mode = fileH.readParam('Modo')
+			if (mode == 'automatico'):
+				collected = None
+			
 			#multithreading app
 				#var that controls robot loop
 			
-			lock = threading.Lock()
-			robot = threading.Thread(target=robotThread, args=(mode,))
+			robot = threading.Thread(target=robotThread, args=(cond,))
 			robot.start()
 			robot.join()
 
