@@ -1,19 +1,21 @@
+#System imports
+import sys
 from flask import Flask, render_template, send_file, redirect, request
-import proxy
 import socket
+import time
+import os
+from flask_socketio import SocketIO, send, disconnect
+#User imports
+import proxy
+import userHandler
 import dataHandler
 import fileHandler
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = 'secret'
+socketio = SocketIO(app)
 
-@app.route('/')
-def index():
-	return render_template('index.html')
-
-@app.route('/menu')
-def menu():
-	return render_template('menu.html')
-
+#INTERNAL METHODS
 def barraTemp(t):
 	tableTemp = '<table><tr>'
 	count = 0
@@ -85,28 +87,240 @@ def barraHum(h):
 	if (h>90):
 		tableHum += '<div style="font-size:14px; margin-left:'+str(h)+'%"><i>'+str(h)+'%</i></div>'
 	return tableHum
+#END INTERNAL METHODS
 
+#ROUTES
+@app.route('/', methods = ['POST', 'GET'])
+def index():
+	global accesGranted
+	if request.method == 'POST':
+		user = request.form.get('user')
+		passwd = request.form.get('passwd')
+		uH = userHandler.USERHANDLER()
+		accesGranted=uH.getAccess(user, passwd)
+		if (accesGranted):
+			return render_template('menu.html')
+		else:
+			return render_template('index.html', warningAccess=True)
+	return render_template('index.html', warningAccess=False)
+
+@app.route('/menu')
+def menu():
+	global accesGranted
+	if accesGranted:
+		return render_template('menu.html')
+	else:
+		return render_template('index.html', warningAccess=False)
 @app.route('/temp/<opcion>')
 def tempHum(opcion):
-	p = proxy.PROXY()
+	global p
+	global accesGranted
+	if accesGranted:
+		h = None
+		t = None
+		if opcion == 'th':
+			(t, h) = p.leerTemHume()
+		elif opcion =='t':
+			t = p.leerTem()
+		elif opcion =='h':
+			h = p.leerHume()
+		p.close()
+
+		tableTemp = None
+		tableHum = None
+
+		if (t != None):
+			tableTemp = barraTemp(t)
+		if (h != None):
+			tableHum = barraHum(h)
+		
+
+		templateData = {
+			'temp' : t,
+			'hum' : h,
+			'tableTemp': tableTemp,
+			'tableHum': tableHum
+		}
+		return render_template('temperatura.html', **templateData)
+	else:
+		return render_template('index.html', warningAccess=False)
+
+@app.route('/img/<opcion>')
+def raspImg(opcion):
+	global accesGranted
+	if accesGranted:
+		return send_file('templates/img/'+opcion, mimetype='img/png')
+	else:
+		return render_template('index.html', warningAccess=False)
+
+@app.route('/menu/calefaccion')
+def calefaccion():
+	global accesGranted
+	if accesGranted:
+		return render_template('menuCalefaccion.html')
+	else:
+		return render_template('index.html', warningAccess=False)
+
+@app.route('/menu/calefaccion/on')
+def calefaccionOn():
+	global accesGranted
+	if accesGranted:
+		try:
+			s = socket.socket()
+			s.connect(('127.0.0.1', 65000))
+			s.send(b'x00x01')
+			s.close()
+		except Exception as e:
+			raise e
+		return redirect("/menu/calefaccion", code=302)
+	else:
+		return render_template('index.html', warningAccess=False)
+	
+@app.route('/menu/calefaccion/off')
+def calefaccionOff():
+	global accesGranted
+	if accesGranted:
+		try:
+			s = socket.socket()
+			s.connect(('127.0.0.1', 65000))
+			s.send(b'x00x02')
+			s.close()
+		except Exception as e:
+			raise e
+		return redirect("/menu/calefaccion", code=302)
+	else:
+		return render_template('index.html', warningAccess=False)
+
+@app.route('/menu/calefaccion/valores', methods=['GET', 'POST'])
+def valores():
+	global accesGranted
+	if accesGranted:
+		fHandler = fileHandler.FILEHANDLER()
+		minTemp = None
+		maxTemp = None
+		try:
+			minTemp = fHandler.readParam('TempMin')
+			maxTemp = fHandler.readParam('TempMax')
+		except Exception as e:
+			print('No se ha podido leer el fichero bien')
+		if request.method == 'POST':
+			minTemp = request.form.get('minTemp')
+			fHandler.writeParam('TempMin',minTemp)
+			maxTemp = request.form.get('maxTemp')
+			fHandler.writeParam('TempMax',maxTemp)
+			#tell the robot to read again the params from file
+			try:
+				s = socket.socket()
+				s.connect(('127.0.0.1', 65000))
+				s.send(b'x00x03')
+				s.close()
+			except Exception as e:
+				raise e
+		#print('tempMax: '+ str(maxTemp))
+		#print('tempMin: '+ str(minTemp))
+
+		tempData = {
+			'minTemp' : minTemp,
+			'maxTemp' : maxTemp
+		}
+		return render_template("cambioValores.html", **tempData)
+	else:
+		return render_template('index.html', warningAccess=False)
+
+@app.route('/menu/calefaccion/modoM')
+def calefaccionModoManual():
+	global accesGranted
+	if accesGranted:
+		try:
+			fHandler = fileHandler.FILEHANDLER()
+			fHandler.writeParam('Modo','manual')
+
+			s = socket.socket()
+			s.connect(('127.0.0.1', 65000))
+			s.send(b'x00x03')
+			s.close()
+		except Exception as e:
+			print(e)
+		return redirect("/menu/calefaccion", code=302)
+	else:
+		return render_template('index.html', warningAccess=False)
+
+@app.route('/menu/calefaccion/modoA')
+def calefaccionModoAutomatico():
+	global accesGranted
+	if accesGranted:
+		try:
+			fHandler = fileHandler.FILEHANDLER()
+			fHandler.writeParam('Modo','automatico')
+			
+			s = socket.socket()
+			s.connect(('127.0.0.1', 65000))
+			s.send(b'x00x03')
+			s.close()
+		except Exception as e:
+			print(e)
+		return redirect("/menu/calefaccion", code=302)
+	else:
+		return render_template('index.html', warningAccess=False)
+
+#TEMP HUM STATISTICS
+@app.route('/menu/calefaccion/est')
+def estadisticas():
+	global accesGranted
+	if accesGranted:
+		#modulo dataHandler.py
+		numeroItemsPlot = 0
+
+		dates,temps,hums = dataHandler.obtenerDatos()
+		#print(temps)
+		#print(dates)
+		#print(hums)
+		temps, hums, dates = dataHandler.agruparMinutos(temps, hums, dates)
+		print(temps)
+		
+		#numero de valores en la grafica para que se vea adecuadamente
+		if (len(temps) <= 12):
+			numeroItemsPlot = len(temps)
+		else:
+			numeroItemsPlot = 12
+
+		if(os.path.isfile('templates/img/temperatura.png')):
+			print('elimnartemp')
+			os.remove("templates/img/temperatura.png")
+		if(os.path.isfile('templates/img/humedad.png')):
+			print('elimnarhume')
+			os.remove("templates/img/humedad.png")
+		dataHandler.stats(temps, dates, hums, numeroItemsPlot)
+		return render_template("estadisticas.html")
+	else:
+		return render_template('index.html', warningAccess=False)
+#END OF ROUTES
+
+#REAL-TIME READING
+@socketio.on('desconectar')
+def handlerCloseing(arg):
+	disconnect()
+
+@socketio.on('lectura')
+def handleReader(lectura):
+	global p
+
+	print('llego aqui')
 	h = None
 	t = None
-	if opcion == 'th':
-		(t, h) = p.leerTemHume()
-	elif opcion =='t':
-		t = p.leerTem()
-	elif opcion =='h':
-		h = p.leerHume()
-	p.close()
-
 	tableTemp = None
 	tableHum = None
-
+	if lectura == '/temp/th':
+		(t, h) = p.leerTemHume()
+	elif lectura =='/temp/t':
+		t = p.leerTem()
+	elif lectura =='/temp/h':
+		h = p.leerHume()
+	"""Creacion de barras""" 
 	if (t != None):
 		tableTemp = barraTemp(t)
 	if (h != None):
 		tableHum = barraHum(h)
-	
 
 	templateData = {
 		'temp' : t,
@@ -114,124 +328,13 @@ def tempHum(opcion):
 		'tableTemp': tableTemp,
 		'tableHum': tableHum
 	}
-	return render_template('temperatura.html', **templateData)
 
-@app.route('/img/<opcion>')
-def raspImg(opcion):
-	return send_file('templates/img/'+opcion, mimetype='img/png')
+	#Espera para leer cada 1 segundo
+	time.sleep(0.5)
+	socketio.emit('lect',  templateData)
+#END REAL-TIME READING
 
-@app.route('/menu/calefaccion')
-def calefaccion():
-	return render_template('menuCalefaccion.html')
-
-@app.route('/menu/calefaccion/on')
-def calefaccionOn():
-	try:
-		s = socket.socket()
-		s.connect(('127.0.0.1', 65000))
-		s.send(b'x00x01')
-		s.close()
-	except Exception as e:
-		raise e
-	return redirect("/menu/calefaccion", code=302)
-	
-@app.route('/menu/calefaccion/off')
-def calefaccionOff():
-	try:
-		s = socket.socket()
-		s.connect(('127.0.0.1', 65000))
-		s.send(b'x00x02')
-		s.close()
-	except Exception as e:
-		raise e
-	return redirect("/menu/calefaccion", code=302)
-
-@app.route('/menu/calefaccion/valores', methods=['GET', 'POST'])
-def valores():
-	fHandler = fileHandler.FILEHANDLER()
-	minTemp = None
-	maxTemp = None
-	try:
-		minTemp = fHandler.readParam('TempMin')
-		maxTemp = fHandler.readParam('TempMax')
-	except Exception as e:
-		print('No se ha podido leer el fichero bien')
-	if request.method == 'POST':
-		minTemp = request.form.get('minTemp')
-		fHandler.writeParam('TempMin',minTemp)
-		maxTemp = request.form.get('maxTemp')
-		fHandler.writeParam('TempMax',maxTemp)
-		#tell the robot to read again the params from file
-		try:
-			s = socket.socket()
-			s.connect(('127.0.0.1', 65000))
-			s.send(b'x00x03')
-			s.close()
-		except Exception as e:
-			raise e
-	#print('tempMax: '+ str(maxTemp))
-	#print('tempMin: '+ str(minTemp))
-
-	tempData = {
-		'minTemp' : minTemp,
-		'maxTemp' : maxTemp
-	}
-	return render_template("cambioValores.html", **tempData)
-
-@app.route('/menu/calefaccion/modoM')
-def calefaccionModoManual():
-	try:
-		fHandler = fileHandler.FILEHANDLER()
-		fHandler.writeParam('Modo','manual')
-
-		s = socket.socket()
-		s.connect(('127.0.0.1', 65000))
-		s.send(b'x00x03')
-		s.close()
-	except Exception as e:
-		print(e)
-	return redirect("/menu/calefaccion", code=302)
-
-@app.route('/menu/calefaccion/modoA')
-def calefaccionModoAutomatico():
-	try:
-		fHandler = fileHandler.FILEHANDLER()
-		fHandler.writeParam('Modo','automatico')
-		
-		s = socket.socket()
-		s.connect(('127.0.0.1', 65000))
-		s.send(b'x00x03')
-		s.close()
-	except Exception as e:
-		print(e)
-	return redirect("/menu/calefaccion", code=302)
-
-@app.route('/menu/calefaccion/est')
-def estadisticas():
-	#modulo dataHandler.py
-	numeroItemsPLot = 0
-
-	dates,temps,hums = dataHandler.obtenerDatos()
-	#print(temps)
-	#print(dates)
-	#print(hums)
-	temps, hums, dates = dataHandler.agruparMinutos(temps, hums, dates)
-	print(temps)
-	
-	#numero de valores en la grafica para que se vea adecuadamente
-	if (len(temps) <= 12):
-		numeroItemsPlot = len(temps)
-	else:
-		numeroItemsPlot = 12
-
-	if(os.path.isfile('templates/img/temperatura.png')):
-		print('elimnartemp')
-		os.remove("templates/img/temperatura.png")
-	if(os.path.isfile('templates/img/humedad.png')):
-		print('elimnarhume')
-		os.remove("templates/img/humedad.png")
-	dataHandler.stats(temps, dates, hums, numeroItemsPlot)
-	return render_template("estadisticas.html")
-
+p = None #Proxy as global variable
+accesGranted = False
 if __name__ == '__main__':
-	app.run(host='0.0.0.0', debug=True)
+	socketio.run(app, host='0.0.0.0', debug=True)
