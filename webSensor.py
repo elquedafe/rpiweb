@@ -117,8 +117,8 @@ def menu():
 def tempHum(opcion):
 	global p
 	global accesGranted
-	p = proxy.PROXY()
 	if accesGranted:
+		p = proxy.PROXY()
 		h = None
 		t = None
 		if opcion == 'th':
@@ -127,7 +127,6 @@ def tempHum(opcion):
 			t = p.leerTem()
 		elif opcion =='h':
 			h = p.leerHume()
-		p.close()
 
 		tableTemp = None
 		tableHum = None
@@ -321,8 +320,7 @@ def handleReader(lectura):
 			tableTemp = barraTemp(t)
 		if (h != None):
 			tableHum = barraHum(h)
-
-		print('llego aqui2')
+			
 		templateData = {
 			'temp' : t,
 			'hum' : h,
