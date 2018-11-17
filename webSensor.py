@@ -146,27 +146,14 @@ def calefaccionOff():
 		raise e
 	return redirect("/menu/calefaccion", code=302)
 
-@app.route('/menu/calefaccion/result', methods = ['POST', 'GET'])
-def result():
-	if request.method == 'POST':
-		try:
-			s = socket.socket()
-			s.connect(('127.0.0.1', 65000))
-			code = 'x00x03'+'x01'+str(request.form.get('minTemp'))+'x02'+str(request.form.get('maxTemp'))
-			s.send(code.encode())
-			s.close()
-		except Exception as e:
-			raise e
-	return redirect("/menu/calefaccion", code=302)
-
 @app.route('/menu/calefaccion/valores', methods=['GET', 'POST'])
 def valores():
 	fHandler = fileHandler.FILEHANDLER()
 	minTemp = None
 	maxTemp = None
 	try:
-		minTemp = fHandler.readParam('TempMax')
-		maxTemp = fHandler.readParam('TempMin')
+		minTemp = fHandler.readParam('TempMin')
+		maxTemp = fHandler.readParam('TempMax')
 	except Exception as e:
 		print('No se ha podido leer el fichero bien')
 	if request.method == 'POST':
@@ -174,14 +161,50 @@ def valores():
 		fHandler.writeParam('TempMin',minTemp)
 		maxTemp = request.form.get('maxTemp')
 		fHandler.writeParam('TempMax',maxTemp)
-	print('tempMax: '+ str(maxTemp))
-	print('tempMin: '+ str(minTemp))
+		#tell the robot to read again the params from file
+		try:
+			s = socket.socket()
+			s.connect(('127.0.0.1', 65000))
+			s.send(b'x00x03')
+			s.close()
+		except Exception as e:
+			raise e
+	#print('tempMax: '+ str(maxTemp))
+	#print('tempMin: '+ str(minTemp))
 
 	tempData = {
 		'minTemp' : minTemp,
 		'maxTemp' : maxTemp
 	}
 	return render_template("cambioValores.html", **tempData)
+
+@app.route('/menu/calefaccion/modoM')
+def calefaccionModoManual():
+	try:
+		fHandler = fileHandler.FILEHANDLER()
+		fHandler.writeParam('Modo','manual')
+
+		s = socket.socket()
+		s.connect(('127.0.0.1', 65000))
+		s.send(b'x00x03')
+		s.close()
+	except Exception as e:
+		print(e)
+	return redirect("/menu/calefaccion", code=302)
+
+@app.route('/menu/calefaccion/modoA')
+def calefaccionModoAutomatico():
+	try:
+		fHandler = fileHandler.FILEHANDLER()
+		fHandler.writeParam('Modo','automatico')
+		
+		s = socket.socket()
+		s.connect(('127.0.0.1', 65000))
+		s.send(b'x00x03')
+		s.close()
+	except Exception as e:
+		print(e)
+	return redirect("/menu/calefaccion", code=302)
 
 @app.route('/menu/calefaccion/est')
 def estadisticas():
