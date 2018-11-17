@@ -94,10 +94,12 @@ def barraHum(h):
 def index():
 	global accesGranted
 	if request.method == 'POST':
+		print('***POST***')
 		user = request.form.get('user')
 		passwd = request.form.get('passwd')
 		uH = userHandler.USERHANDLER()
 		accesGranted=uH.getAccess(user, passwd)
+		print(accesGranted)
 		if (accesGranted):
 			return render_template('menu.html')
 		else:
@@ -110,11 +112,12 @@ def menu():
 	if accesGranted:
 		return render_template('menu.html')
 	else:
-		return render_template('index.html', warningAccess=False)
+		return redirect('/')
 @app.route('/temp/<opcion>')
 def tempHum(opcion):
 	global p
 	global accesGranted
+	p = proxy.PROXY()
 	if accesGranted:
 		h = None
 		t = None
@@ -143,15 +146,11 @@ def tempHum(opcion):
 		}
 		return render_template('temperatura.html', **templateData)
 	else:
-		return render_template('index.html', warningAccess=False)
+		return redirect('/')
 
 @app.route('/img/<opcion>')
 def raspImg(opcion):
-	global accesGranted
-	if accesGranted:
-		return send_file('templates/img/'+opcion, mimetype='img/png')
-	else:
-		return render_template('index.html', warningAccess=False)
+	return send_file('templates/img/'+opcion, mimetype='img/png')
 
 @app.route('/menu/calefaccion')
 def calefaccion():
@@ -159,7 +158,7 @@ def calefaccion():
 	if accesGranted:
 		return render_template('menuCalefaccion.html')
 	else:
-		return render_template('index.html', warningAccess=False)
+		return redirect('/')
 
 @app.route('/menu/calefaccion/on')
 def calefaccionOn():
@@ -174,7 +173,7 @@ def calefaccionOn():
 			raise e
 		return redirect("/menu/calefaccion", code=302)
 	else:
-		return render_template('index.html', warningAccess=False)
+		return redirect('/')
 	
 @app.route('/menu/calefaccion/off')
 def calefaccionOff():
@@ -189,7 +188,7 @@ def calefaccionOff():
 			raise e
 		return redirect("/menu/calefaccion", code=302)
 	else:
-		return render_template('index.html', warningAccess=False)
+		return redirect('/')
 
 @app.route('/menu/calefaccion/valores', methods=['GET', 'POST'])
 def valores():
@@ -225,7 +224,7 @@ def valores():
 		}
 		return render_template("cambioValores.html", **tempData)
 	else:
-		return render_template('index.html', warningAccess=False)
+		return redirect('/')
 
 @app.route('/menu/calefaccion/modoM')
 def calefaccionModoManual():
@@ -243,7 +242,7 @@ def calefaccionModoManual():
 			print(e)
 		return redirect("/menu/calefaccion", code=302)
 	else:
-		return render_template('index.html', warningAccess=False)
+		return redirect('/')
 
 @app.route('/menu/calefaccion/modoA')
 def calefaccionModoAutomatico():
@@ -261,7 +260,7 @@ def calefaccionModoAutomatico():
 			print(e)
 		return redirect("/menu/calefaccion", code=302)
 	else:
-		return render_template('index.html', warningAccess=False)
+		return redirect('/')
 
 #TEMP HUM STATISTICS
 @app.route('/menu/calefaccion/est')
@@ -293,7 +292,7 @@ def estadisticas():
 		dataHandler.stats(temps, dates, hums, numeroItemsPlot)
 		return render_template("estadisticas.html")
 	else:
-		return render_template('index.html', warningAccess=False)
+		return redirect('/')
 #END OF ROUTES
 
 #REAL-TIME READING
@@ -304,34 +303,38 @@ def handlerCloseing(arg):
 @socketio.on('lectura')
 def handleReader(lectura):
 	global p
+	global accesGranted
+	if accesGranted:
+		print('llego aqui')
+		h = None
+		t = None
+		tableTemp = None
+		tableHum = None
+		if lectura == '/temp/th':
+			(t, h) = p.leerTemHume()
+		elif lectura =='/temp/t':
+			t = p.leerTem()
+		elif lectura =='/temp/h':
+			h = p.leerHume()
+		"""Creacion de barras""" 
+		if (t != None):
+			tableTemp = barraTemp(t)
+		if (h != None):
+			tableHum = barraHum(h)
 
-	print('llego aqui')
-	h = None
-	t = None
-	tableTemp = None
-	tableHum = None
-	if lectura == '/temp/th':
-		(t, h) = p.leerTemHume()
-	elif lectura =='/temp/t':
-		t = p.leerTem()
-	elif lectura =='/temp/h':
-		h = p.leerHume()
-	"""Creacion de barras""" 
-	if (t != None):
-		tableTemp = barraTemp(t)
-	if (h != None):
-		tableHum = barraHum(h)
+		print('llego aqui2')
+		templateData = {
+			'temp' : t,
+			'hum' : h,
+			'tableTemp': tableTemp,
+			'tableHum': tableHum
+		}
 
-	templateData = {
-		'temp' : t,
-		'hum' : h,
-		'tableTemp': tableTemp,
-		'tableHum': tableHum
-	}
-
-	#Espera para leer cada 1 segundo
-	time.sleep(0.5)
-	socketio.emit('lect',  templateData)
+		#Espera para leer cada 1 segundo
+		time.sleep(0.5)
+		socketio.emit('lect',  templateData)
+	else:
+		return redirect('/')
 #END REAL-TIME READING
 
 p = None #Proxy as global variable
