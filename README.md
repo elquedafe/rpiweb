@@ -1,4 +1,4 @@
 # rpiweb
 
 ## how to clone
-git clone <http-dir>
+git clone https://github.com/ddeuterio/rpiweb.git
