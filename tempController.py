@@ -93,7 +93,9 @@ def robotThread(cond):
 
 # Logica de comandos de Telegram
 def lecturaMensajesBot(msg):
+	global bot
 	global telGroup
+	#telGroup = int(telGroup)
 	firstName = msg['from']['first_name']
 	idUser = msg['from']['id']
 	lastName = msg['from']['last_name']
@@ -151,7 +153,8 @@ def main (args):
 		telToken = fileH.readParam('TelegramToken')
 		global telGroup
 		telGroup = fileH.readParam('TelegramIDGrupo')
-		 #used to cast string to int
+		#used to cast string to int
+		global bot
 		bot = telepot.Bot(telToken)
 		#activa lecturas de comandos por parte del bot
 		MessageLoop(bot, lecturaMensajesBot).run_as_thread()
