@@ -2,6 +2,8 @@ from flask import Flask, render_template, send_file, redirect, request
 import proxy
 import socket
 import dataHandler
+import fileHandler
+
 app = Flask(__name__)
 
 @app.route('/')
@@ -144,10 +146,6 @@ def calefaccionOff():
 		raise e
 	return redirect("/menu/calefaccion", code=302)
 
-@app.route('/menu/calefaccion/valores')
-def valores():
-	return render_template('cambioValores.html');
-
 @app.route('/menu/calefaccion/result', methods = ['POST', 'GET'])
 def result():
 	if request.method == 'POST':
@@ -161,15 +159,54 @@ def result():
 			raise e
 	return redirect("/menu/calefaccion", code=302)
 
+@app.route('/menu/calefaccion/valores', methods=['GET', 'POST'])
+def valores():
+	fHandler = fileHandler.FILEHANDLER()
+	minTemp = None
+	maxTemp = None
+	try:
+		minTemp = fHandler.readParam('TempMax')
+		maxTemp = fHandler.readParam('TempMin')
+	except Exception as e:
+		print('No se ha podido leer el fichero bien')
+	if request.method == 'POST':
+		minTemp = request.form.get('minTemp')
+		fHandler.writeParam('TempMin',minTemp)
+		maxTemp = request.form.get('maxTemp')
+		fHandler.writeParam('TempMax',maxTemp)
+	print('tempMax: '+ str(maxTemp))
+	print('tempMin: '+ str(minTemp))
+
+	tempData = {
+		'minTemp' : minTemp,
+		'maxTemp' : maxTemp
+	}
+	return render_template("cambioValores.html", **tempData)
+
 @app.route('/menu/calefaccion/est')
 def estadisticas():
 	#modulo dataHandler.py
-	numeroItemsPlot = 10
+	numeroItemsPLot = 0
 
 	dates,temps,hums = dataHandler.obtenerDatos()
-
+	#print(temps)
+	#print(dates)
+	#print(hums)
 	temps, hums, dates = dataHandler.agruparMinutos(temps, hums, dates)
+	print(temps)
 	
+	#numero de valores en la grafica para que se vea adecuadamente
+	if (len(temps) <= 12):
+		numeroItemsPlot = len(temps)
+	else:
+		numeroItemsPlot = 12
+
+	if(os.path.isfile('templates/img/temperatura.png')):
+		print('elimnartemp')
+		os.remove("templates/img/temperatura.png")
+	if(os.path.isfile('templates/img/humedad.png')):
+		print('elimnarhume')
+		os.remove("templates/img/humedad.png")
 	dataHandler.stats(temps, dates, hums, numeroItemsPlot)
 	return render_template("estadisticas.html")
 
