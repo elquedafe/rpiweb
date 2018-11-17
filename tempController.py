@@ -26,6 +26,7 @@ def serverThread(cond):
 				if (data):
 					cond.acquire()
 					collected = data.decode()
+					print(collected)
 					cond.notify()
 					cond.release()
 					break;
@@ -39,10 +40,16 @@ def robotStateChange():
 	global collected
 	global led
 
+	if (collected == 'x00x01' or collected == 'x00x02'):
+		fileH = fileHandler.FILEHANDLER()
+		fileH.writeParam('Modo', 'manual')
+
 	if collected == 'x00x01':
 		led.on()
 	elif collected == 'x00x02':
 		led.off()
+	elif collected == 'x00x03':
+		led.off() #momentaneamente
 
 	#reset collected data
 	collected = None
@@ -143,7 +150,10 @@ email = None
 lec = None
 mode = None
 '''
-Collected is used to switch between modes and to store
+Collected is used to switch between modes and to store the data transfered from webServer
+x00x01 --> turn on led
+x00x02 --> turn off led
+x00x03 --> read again temp parameters
 '''
 collected = None
 led = LED(18)
