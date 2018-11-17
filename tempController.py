@@ -104,11 +104,11 @@ def lecturaMensajesBot(msg):
 	persona = firstName+" "+lastName+" --> ("+userName+")"
 
 	if(texto[0] == '/'):
-		if (texto == '/on_calefaccion'):
+		if (texto == '/on_calefaccion' or texto == '/on_calefaccion@mayordomoetsist_bot'):
 			bot.sendMessage(telGroup, 'Calefaccion encendida por '+ persona)
-		elif (texto == '/off_calefaccion'):
+		elif (texto == '/off_calefaccion' or texto == '/off_calefaccion@mayordomoetsist_bot'):
 			bot.sendMessage(telGroup, 'Calefaccion apagada por '+ persona)
-		elif (texto == '/obtener_estadisticas'):
+		elif (texto == '/obtener_estadisticas' or texto == 'obtener_estadisticas@mayordomoetsist_bot'):
 			try:
 				bot.sendPhoto(telGroup, open('templates/img/temperatura.png','rb'))
 			except Exception as e:
@@ -119,7 +119,7 @@ def lecturaMensajesBot(msg):
 			except Exception as e:
 				bot.sendMessage(telGroup, 'No se han podido enviar las estadisticas de humedad')
 				print(str(e))
-		elif (texto == '/obtener_registros'):
+		elif (texto == '/obtener_registros' or texto == '/obtener_registros@mayordomoetsist_bot'):
 			try:
 				bot.sendDocument(telGroup, open('eventos.txt','rb'))
 			except Exception as e:
