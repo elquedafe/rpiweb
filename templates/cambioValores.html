@@ -1,0 +1,78 @@
+<html>
+	<head>
+		<script>
+			function cambioEstilo(urlEstilo){
+				var stylesheet = document.getElementById("stylesheet");
+       			stylesheet.setAttribute('href', urlEstilo);
+			}
+
+			function encender(){
+				alert("Se encenderá la calefacción")
+			}
+
+			function apagar(){
+				alert("Se apagará la calefacción")
+			}
+
+
+		</script>
+
+		<link id="stylesheet" rel="stylesheet" href='/../../static/style.css' />
+	</head>
+	<body>
+		<div class="title">
+			<div class="titleSec">
+				<span class="imageTitle">
+					<a href="/"><img id="logo" src="/../../img/raspberry-pi-logo.png"></a>
+				</span>
+				<span class="spanVacio"></span>
+				<span class="textTitle">
+					<i>Diseño de Aplicaciones para RaspberryPi</i>
+				</span>
+			</div>
+		</div>
+
+		<div class="container">
+			<div class="main">
+				<div>
+				<h2>Cambio de valores de calefacción</h2>
+				</div>
+				<br/>
+				<div>
+					<form name="search" action="/tempController.py" method="post">
+						<fieldset>
+							<div>
+								<label for="minTemp">Temperatura minima de activación</label>
+								<input type="text" name="minTemp">
+							</div>
+							<div>
+								<label for="maxTemp">Temperatura maxima de activación</label>
+								<input type="text" name="minTemp">
+							</div>
+							<input type="submit" value="cambiar">
+						</fieldset>
+					</form> 
+				</div>
+				</br>
+				<div><p>Volver al <a href="/menu/calefaccion">menu de calefaccion</a></p></div>
+			</div>
+		</div>
+		<div class="bottom">
+			<div style="display: flex; font-size: 16px;">
+				<div style="margin-left: 42%; margin-right: 5%">
+					<a onclick="cambioEstilo('../static/style.css')" href="#">Estilo 1</a>
+				</div>
+				<div style="margin-left: 0px;">
+					<a onclick="cambioEstilo('../static/styleDark.css')" href="#">Estilo 2</a>
+				</div>
+			</div>
+			<span class="upm">
+				<img id="logoUPM" src="/../../img/logoUPM.png"/>
+			</span>
+			<span class="etsist">
+				<img id="logoETSIST" src="/../../img/logoETSIST.gif"/>
+			</span>
+		</div>
+	</body>
+
+</html>

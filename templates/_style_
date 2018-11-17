@@ -1,0 +1,94 @@
+*{
+	padding: 0;
+	border: 0;
+	text-decoration: none;
+	margin:0;
+}
+body{
+	width : 900px;
+	margin: 1em auto;
+	font-family: Tahoma;
+	font-size: 10pt;
+	border-top:.8em;		
+	padding:2em;
+	color: #000;			
+}
+
+a:link, a:visited, a:hover{
+	color: #000;
+}
+
+#head{
+	text-align:center;
+	font-size: 1.5em;
+	font-weight:bold;
+	margin-top:1em;
+}
+#title{
+	font-size:1.3em;
+	border-top:.8em;
+	background-color:#eee;
+}
+#menu ul{
+	list-style-type: none;
+	margin: 0;
+	padding: 1em;
+}	
+#menu{
+	clear:both;
+	overflow: hidden;
+	font-size: 0.75em;
+}
+
+#menu li{
+	float: left;
+	margin: .2em;
+	overflow: hidden;
+}	
+#menu a, #menu a:visited, #menu a:hover{
+	text-decoration: none;
+	background-color: #EEE;
+	padding: .8em;
+}
+
+.title{
+	font-size: 1.05em;
+	padding:.2em;
+	color: #FFF;
+	font-weight: bolder;
+	background-color:#000;
+	margin: 0; 
+	margin-bottom: .5em;
+}
+.infoCategory > .title	a:link, .infoCategory > .title a:hover, .infoCategory > .title a:visited{
+	color:#FFF;
+}
+.infoCategory {
+		padding: 0.8em;
+		margin-top: 1em;
+		overflow:hidden;
+}
+.recurso{
+	margin-left: .5em;
+	border-bottom: 1px solid #000; 	
+	overflow:hidden;
+	padding:.5em;
+}
+.recurso .title{
+	margin:0;
+	color: #000;
+	background-color: #FFF;
+}
+.desc{
+	background-color:#EEE;
+}
+.map{
+	width: 100%;
+	overflow: hidden;
+}
+.map img{
+	display: block;
+	margin: .5em auto;
+}
+
+</style>

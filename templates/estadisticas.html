@@ -1,0 +1,58 @@
+<html>
+	<head>
+		<script>
+			function cambioEstilo(urlEstilo){
+				var stylesheet = document.getElementById("stylesheet");
+       			stylesheet.setAttribute('href', urlEstilo);
+			}
+		</script>
+
+		<link id="stylesheet" rel="stylesheet" href='/../../static/style.css' />
+	</head>
+	<body>
+		<div class="title">
+			<div class="titleSec">
+				<span class="imageTitle">
+					<a href="/"><img id="logo" src="/../../img/raspberry-pi-logo.png"></a>
+				</span>
+				<span class="spanVacio"></span>
+				<span class="textTitle">
+					<i>Diseño de Aplicaciones para RaspberryPi</i>
+				</span>
+			</div>
+		</div>
+		<div class="container">
+			<div class="main">
+				<div>
+					<h2>Estadisticas</h2>
+				</div>
+				<div>
+					<p>Temperatura</p>
+					<img src="/../../img/temperatura.png">
+				</div>
+				<div>
+					<p>Humedad</p>
+					<img src="/../../img/humedad.png">
+				</div>
+				<br/>	
+			</div>
+		</div>
+		<div class="bottom">
+			<div style="display: flex; font-size: 16px;">
+				<div style="margin-left: 42%; margin-right: 5%">
+					<a onclick="cambioEstilo('/../../static/style.css')" href="#">Estilo 1</a>
+				</div>
+				<div style="margin-left: 0px;">
+					<a onclick="cambioEstilo('/../../static/styleDark.css')" href="#">Estilo 2</a>
+				</div>
+			</div>
+			<span calss="upm">
+				<img id="logoUPM" src="img/logoUPM.png"/>
+			</span>
+			<span class="etsist">
+				<img id="logoETSIST" src="img/logoETSIST.gif"/>
+			</span>
+		</div>
+	</body>
+
+</html>

@@ -1,0 +1,144 @@
+<html>
+	<head>
+		<script>
+			function cambioEstilo(urlEstilo){
+				var stylesheet = document.getElementById("stylesheet");
+       			stylesheet.setAttribute('href', urlEstilo);
+			}
+		</script>
+
+		<link id="stylesheet" rel="stylesheet" href='../static/styleDark.css' />
+	</head>
+	<body>
+		<div class="title">
+			<div class="titleSec">
+				<span class="imageTitle">
+					<img id="logo" src="/../img/raspberry-pi-logo.png">
+				</span>
+				<span class="spanVacio"></span>
+				<span class="textTitle">
+					<i>Diseño de Aplicaciones para RaspberryPi</i>
+				</span>
+			</div>
+		</div>
+
+		<div class="container">
+			<div class="main">
+				<div><h2>Lecturas del sensor</h2></div>
+				<br/>
+				<div>
+					{% if temp %}
+					<p>Temperatura: {{temp}}</p>
+					{% endif %}
+					<div style="display: flex; width:100%;">
+					    <div style="margin-left: -10px; margin-right: 12%">
+					       	-40&deg;C
+					    </div>
+					    <div style="margin-left: 0px; margin-right: 12%">
+					    	-20&deg;C
+					    </div>
+					    <div style="margin-left: 0px; margin-right: 12%">
+					    	0&deg;C
+					    </div>
+					    <div style="margin-left: 0px; margin-right: 12%">
+					    	20&deg;C
+					    </div>
+					    <div style="margin-left: 0px; margin-right: 12.4%">
+					    	40&deg;C
+					    </div>
+					    <div style="margin-left: 0px; margin-right: 11.6%">
+					    	60&deg;C
+					    </div>
+					    <div style="margin-left: 0px;">
+					    	80&deg;C
+					    </div>
+					</div>
+					<div style="display:flex; width:100%;">
+					    <div style="margin-right: 16.8%; margin-left: 0px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">
+					    </div>
+					    <div style="margin-right: 16.66%; margin-left: 0px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">
+					    </div>
+					    <div style="margin-right: 15.9%; margin-left: 0px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">
+					    </div>
+					    <div style="margin-right: 16.66%; argin-left: 0px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">
+					    </div>
+					    <div style="margin-right: 16.66%; margin-left: 0px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">
+					    </div>
+					    <div style="margin-right: 15.9%; margin-left: 0px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">
+					    </div>
+					    <div style="margin-left: 0px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">
+					    </div>
+					</div>
+					<div class="barra">
+						<table><tr>
+						{% set count = 0 %}
+						{% for i in (1,101) %}
+							{% if count < (temp+40)*100/120 %}
+								<td class="tempBar" style="background-color:#ff6666">&nbsp;</td>
+							{% else %}
+								<td>&nbsp;</td>
+							{% endif %}
+							{% set count = count+1 %}
+						{% endfor %}
+						</tr></table>
+					</div>
+
+					{% if hum %}
+					<p>Humedad: {{hum}}</p>
+					{% endif %}
+					<div style="display: flex; width:100%;">
+					    <div style="margin-left: -2px; margin-right: 21.3%">
+					       	0%
+					    </div>
+					    <div style="margin-left: 0px; margin-right: 20.3%">
+					    	25%
+					    </div>
+					    <div style="margin-left: 0px; margin-right: 21%">
+					    	50%
+					    </div>
+					    <div style="margin-left: 0px; margin-right: 20%">
+					    	75%
+					    </div>
+					    <div style="margin-left: 0px; margin-right: 12.4%">
+					    	100%
+					    </div>
+					</div>
+					<div style="display:flex; width:100%;">
+					    <div style="margin-right: 24.8%; margin-left: 0px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">
+					    </div>
+					    <div style="margin-right: 24.8%; margin-left: 0px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">
+					    </div>
+					    <div style="margin-right: 24.8%; margin-left: 0px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">
+					    </div>
+					    <div style="margin-right: 24.8%; margin-left: 0px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">
+					    </div>
+					    <div style="margin-left: 0px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">
+					    </div>
+					</div>
+					<div class="barra">
+					</div>
+				</div>	
+				<p>Volver al <a href="/menu">menu</a></p>
+				<br/>
+			</div>
+		</div>
+		<div class="bottom">
+			<div style="display: flex; font-size: 16px;">
+				<div style="margin-left: 42%; margin-right: 5%">
+					<a onclick="cambioEstilo('../static/style.css')" href="#">Estilo 1</a>
+				</div>
+				<div style="margin-left: 0px;">
+					<a onclick="cambioEstilo('../static/styleDark.css')" href="#">Estilo 2</a>
+				</div>
+			</div>
+			<span calss="upm">
+				<img id="logoUPM" src="/../img/logoUPM.png"/>
+			</span>
+			<span class="etsist">
+				<img id="logoETSIST" src="/../img/logoETSIST.gif"/>
+			</span>
+		</div>
+			
+	</body>
+
+</html>
