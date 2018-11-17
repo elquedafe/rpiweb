@@ -34,22 +34,33 @@ def serverThread(cond):
 		finally:
 			conn.close()	
 
-def robotThread(cond):
+def robotStateChange():
+	#global variables needed
 	global collected
-	global telToken
-	global telGroup
-	#var to write events
-	wEvent = open("eventos.txt", "a")
-	#creating sensor
-	sensor = proxy.PROXY()
-	#led
 	global led
+
+	if collected == 'x00x01':
+		led.on()
+	elif collected == 'x00x02':
+		led.off()
+
+	#reset collected data
+	collected = None
+
+def robotThread(cond):
+	#global variables needed for the robot to run
+	global bot
+
+	wEvent = open("eventos.txt", "a") #var to write events
+	sensor = proxy.PROXY() #creating sensor
+	global led
+
+	#robot tasks
 	if (mode == 'automatico'):
-		#var to send messages
-		#bot = telepot.Bot(telToken)
+		#robot starts processing information
+		bot = telepot.Bot(telToken) #var to send messages
 		
-		#notification control
-		notification = False
+		notification = False #number of notifications is limit to 1 per on/off
 		cond.acquire()
 		while collected == None:
 			cond.notify()
@@ -57,16 +68,16 @@ def robotThread(cond):
 			temp = sensor.leerTem()
 			if (tempMax > temp):
 				if (notification == False):
-					#bot.sendMessage(telGroup, 'se enciende la calefaccion --- temperatura actual: '+str(temp)+'ºC'+"\n")
+					bot.sendMessage(telGroup, 'se enciende la calefaccion --- temperatura actual: '+str(temp)+'ºC'+"\n")
 					notification = True
 					led.on()
-					wEvent.write(format(datetime.datetime.now())+"\t"+str(temp)+"\tencendido")
+					wEvent.write(format(datetime.datetime.now())+"\t"+str(temp)+"\tencendido\n")
 			
 			if (tempMax < temp):
 				if notification:
 					led.off()
-					wEvent.write(format(datetime.datetime.now())+"\t"+str(temp)+"\tapagado")
-					#bot.sendMessage(telGroup, 'se apaga la calefaccion --- temperatura actual: '+str(temp)+'ºC'+"\n")
+					wEvent.write(format(datetime.datetime.now())+"\t"+str(temp)+"\tapagado\n")
+					bot.sendMessage(telGroup, 'se apaga la calefaccion --- temperatura actual: '+str(temp)+'ºC'+"\n")
 					notification = False
 			time.sleep(lec);
 			cond.acquire()
@@ -74,19 +85,14 @@ def robotThread(cond):
 		cond.notify()
 		cond.release()
 	else:
+		#manual mode
+			#wait for user interaction
 		cond.acquire()
 		while collected == None:
 			cond.wait()
-
-		if collected == 'x00x01':
-			led.on()
-		elif collected == 'x00x02':
-			led.off()
-
-		#reset collected data
-		collected = None
-		#collected = None
 		cond.release()
+
+	robotStateChange()
 	#closing sensor at the end
 	sensor.close()
 
@@ -94,7 +100,6 @@ def robotThread(cond):
 # Logica de comandos de Telegram
 def lecturaMensajesBot(msg):
 	global bot
-	global telGroup
 	#telGroup = int(telGroup)
 	firstName = msg['from']['first_name']
 	idUser = msg['from']['id']
@@ -128,7 +133,7 @@ def lecturaMensajesBot(msg):
 		else:
 			bot.sendMessage(telGroup, "Comando: "+texto+" no valido. Accionado por "+persona)
 
-
+#params read from control.ini
 tempMin = None
 tempMax = None
 hume = None
@@ -137,6 +142,9 @@ telGroup = None
 email = None
 lec = None
 mode = None
+'''
+Collected is used to switch between modes and to store
+'''
 collected = None
 led = LED(18)
 bot = None
@@ -153,7 +161,6 @@ def main (args):
 		telToken = fileH.readParam('TelegramToken')
 		global telGroup
 		telGroup = fileH.readParam('TelegramIDGrupo')
-		#used to cast string to int
 		global bot
 		bot = telepot.Bot(telToken)
 		#activa lecturas de comandos por parte del bot
@@ -164,10 +171,6 @@ def main (args):
 		serv.start()
 		while 1:
 			try:
-				#update params in control.ini file
-				#if (collected[:6] == 'x00x03'):
-				#	fileH.writeParam('TempMin', collected[10:11])
-				#	fileH.writeParam('TempMax', collected[15:16])
 				#reading config parameters
 				global tempMin
 				tempMin = float(fileH.readParam('TempMin'))
@@ -177,8 +180,10 @@ def main (args):
 				hume = float(fileH.readParam('Hume'))
 				global email
 				email = fileH.readParam('Email')
+				#telegram variables
 				telToken = fileH.readParam('TelegramToken')
 				telGroup = fileH.readParam('TelegramIDGrupo')
+
 				global lec
 				lec = float(fileH.readParam('IntervaloLectura'))
 				global mode
