@@ -1,4 +1,4 @@
-from flask import Flask, render_template, send_file, redirect
+from flask import Flask, render_template, send_file, redirect, request
 import proxy
 import socket
 import dataHandler
@@ -146,7 +146,20 @@ def calefaccionOff():
 
 @app.route('/menu/calefaccion/valores')
 def valores():
-	return 0
+	return render_template('cambioValores.html');
+
+@app.route('/menu/calefaccion/result', methods = ['POST', 'GET'])
+def result():
+	if request.method == 'POST':
+		try:
+			s = socket.socket()
+			s.connect(('127.0.0.1', 65000))
+			code = 'x00x03'+'x01'+str(request.form.get('minTemp'))+'x02'+str(request.form.get('maxTemp'))
+			s.send(code.encode())
+			s.close()
+		except Exception as e:
+			raise e
+	return redirect("/menu/calefaccion", code=302)
 
 @app.route('/menu/calefaccion/est')
 def estadisticas():

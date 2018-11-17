@@ -13,7 +13,7 @@ import telepot
 
 def serverThread(cond):
 	socket_s = socket.socket()
-	socket_s.bind(('localhost', 65000))
+	socket_s.bind(('127.0.0.1', 65000))
 	socket_s.listen(1)
 	while (1):
 		conn, addr = socket_s.accept()
@@ -24,7 +24,7 @@ def serverThread(cond):
 				data = conn.recv(1024)
 				if (data):
 					cond.acquire()
-					collected = data
+					collected = data.decode()
 					cond.notify()
 					cond.release()
 					break;
@@ -45,7 +45,7 @@ def robotThread(cond):
 	global led
 	if (mode == 'automatico'):
 		#var to send messages
-		bot = telepot.Bot(telToken)
+		#bot = telepot.Bot(telToken)
 		
 		#notification control
 		notification = False
@@ -56,7 +56,7 @@ def robotThread(cond):
 			temp = sensor.leerTem()
 			if (tempMax > temp):
 				if (notification == False):
-					bot.sendMessage(telGroup+0, 'se enciende la calefaccion --- temperatura actual: '+str(temp)+'ºC'+"\n")
+					#bot.sendMessage(telGroup, 'se enciende la calefaccion --- temperatura actual: '+str(temp)+'ºC'+"\n")
 					notification = True
 					led.on()
 					wEvent.write(format(datetime.datetime.now())+"\t"+str(temp)+"\tencendido")
@@ -65,7 +65,7 @@ def robotThread(cond):
 				if notification:
 					led.off()
 					wEvent.write(format(datetime.datetime.now())+"\t"+str(temp)+"\tapagado")
-					bot.sendMessage(telGroup+0, 'se apaga la calefaccion --- temperatura actual: '+str(temp)+'ºC'+"\n")
+					#bot.sendMessage(telGroup, 'se apaga la calefaccion --- temperatura actual: '+str(temp)+'ºC'+"\n")
 					notification = False
 			time.sleep(lec);
 			cond.acquire()
@@ -77,9 +77,9 @@ def robotThread(cond):
 		while collected == None:
 			cond.wait()
 
-		if collected == b'x00x01':
+		if collected == 'x00x01':
 			led.on()
-		elif collected == b'x00x02':
+		elif collected == 'x00x02':
 			led.off()
 
 		#reset collected data
@@ -107,12 +107,17 @@ def main (args):
 	try:
 		global collected
 		global cond
+
 		cond = threading.Condition()
 
 		serv = threading.Thread(target=serverThread, args=(cond,))
 		serv.start()
 		while 1:
-			
+			try:
+			#update params in control.ini file
+			if (collected[:6] == 'x00x03'):
+				fileH.writeParam('TempMin', collected[10:11])
+				fileH.writeParam('TempMax', collected[15:16])
 			#reading config parameters
 			global tempMin
 			tempMin = float(fileH.readParam('TempMin'))
