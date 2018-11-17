@@ -39,7 +39,13 @@
 				</div>
 				<br/>
 				<div>
-					<form name="search" action="/menu/calefaccion/result" method="post">
+					{% if minTemp %}
+					<p> Ultima temperatura minima guardada: {{minTemp}} </p>
+					{% endif %}
+					{% if maxTemp %}
+					<p> Ultima temperatura maxima guardada: {{maxTemp}} </p>
+					{% endif %}
+					<form name="search" action="/menu/calefaccion/valores" method="post">
 						<p>Temperatura minima de activación<input type="text" name="minTemp"></p>
 						<p>Temperatura maxima de activación<input type="text" name="maxTemp"></p>
 						<p><input type="submit" value="cambiar"></p>
