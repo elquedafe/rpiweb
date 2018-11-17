@@ -8,7 +8,7 @@ class FILEHANDLER:
 		self._config.read("control.ini")
 		return self._config['Parameters'][param]
 
-	def writeParam(self, param):
-		self._config.set('Parameters', param)
-		with open('control.ini', 'wb') as configfile:
-				self._config.write(configfile)
+	def writeParam(self, param, value):
+		self._config.set('Parameters', param, value)
+		with open('control.ini', 'w') as configfile:
+			self._config.write(configfile)
