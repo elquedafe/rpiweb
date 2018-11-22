@@ -5,6 +5,7 @@ import datetime
 import time
 
 import fileHandler
+import notificationHandler
 import proxy
 from gpiozero import LED
 
@@ -35,32 +36,53 @@ def serverThread(cond):
 		finally:
 			conn.close()	
 
-def robotStateChange():
+def robotStateChange(persona=None):
 	#global variables needed
 	global collected
 	global led
+	global noti
+	global bot
+	global telGroup
+	global temp
+
+	wEvent = open("eventos.txt", "a") #var to write events
 
 	if (collected == 'x00x01' or collected == 'x00x02'):
 		fileH = fileHandler.FILEHANDLER()
 		fileH.writeParam('Modo', 'manual')
+		wEvent.write(format(datetime.datetime.now())+"\t"+str(temp)+"\tcambio a modo manual\n")
+
+	elif (collected == 'x00x04'):
+		fileH = fileHandler.FILEHANDLER()
+		fileH.writeParam('Modo', 'automatico')
+		noti.sendNotification('Calefaccion automatica activada --- temperatura actual: '+str(temp)+' Celsius '+str(datetime.datetime.now()), bot, telGroup, persona)
+		wEvent.write(format(datetime.datetime.now())+"\t"+str(temp)+"\tcambio a modo automatico\n")
 
 	if collected == 'x00x01':
 		led.on()
+		noti.sendNotification('Manual: se enciende la calefaccion --- temperatura actual: '+str(temp)+' Celsius '+str(datetime.datetime.now()), bot, telGroup, persona)
+		wEvent.write(format(datetime.datetime.now())+"\t"+str(temp)+"\tencendido\n")
 	elif collected == 'x00x02':
 		led.off()
+		noti.sendNotification('Manual: se apaga la calefaccion --- temperatura actual: '+str(temp)+' Celsius '+str(datetime.datetime.now()), bot, telGroup, persona)
+		wEvent.write(format(datetime.datetime.now())+"\t"+str(temp)+"\tencendido\n")
 	elif collected == 'x00x03':
 		led.off() #momentaneamente
+		noti.sendNotification('Cambio de modo desde el servidor --- temperatura actual: '+str(temp)+' Celsius '+str(datetime.datetime.now()), bot, telGroup, persona)
+		wEvent.write(format(datetime.datetime.now())+"\t"+str(temp)+"\tcambio de modo desde el servidor web\n")
 
+	wEvent.close()
 	#reset collected data
 	collected = None
 
 def robotThread(cond):
 	#global variables needed for the robot to run
 	global bot
+	global temp
 
-	wEvent = open("eventos.txt", "a") #var to write events
 	sensor = proxy.PROXY() #creating sensor
 	global led
+	global noti
 
 	#robot tasks
 	if (mode == 'automatico'):
@@ -73,9 +95,10 @@ def robotThread(cond):
 			cond.notify()
 			cond.release()
 			temp = sensor.leerTem()
+			wEvent = open("eventos.txt", "a") #var to write events
 			if (tempMax > temp):
 				if (notification == False):
-					bot.sendMessage(telGroup, 'se enciende la calefaccion --- temperatura actual: '+str(temp)+'ºC'+"\n")
+					noti.sendNotification('Manual: se enciende la calefaccion --- temperatura actual: '+str(temp)+' Celsius '+str(datetime.datetime.now()), bot, telGroup, persona)
 					notification = True
 					led.on()
 					wEvent.write(format(datetime.datetime.now())+"\t"+str(temp)+"\tencendido\n")
@@ -84,8 +107,9 @@ def robotThread(cond):
 				if notification:
 					led.off()
 					wEvent.write(format(datetime.datetime.now())+"\t"+str(temp)+"\tapagado\n")
-					bot.sendMessage(telGroup, 'se apaga la calefaccion --- temperatura actual: '+str(temp)+'ºC'+"\n")
+					noti.sendNotification('Manual: se apaga la calefaccion --- temperatura actual: '+str(temp)+' Celsius '+str(datetime.datetime.now()), bot, telGroup, persona)
 					notification = False
+			wEvent.close()
 			time.sleep(lec);
 			cond.acquire()
 
@@ -93,12 +117,13 @@ def robotThread(cond):
 		cond.release()
 	else:
 		#manual mode
-			#wait for user interaction
+		#wait for user interaction
 		cond.acquire()
 		while collected == None:
 			cond.wait()
 		cond.release()
 
+	temp = sensor.leerTem()
 	robotStateChange()
 	#closing sensor at the end
 	sensor.close()
@@ -118,14 +143,12 @@ def lecturaMensajesBot(msg):
 
 	if(texto[0] == '/'):
 		if (texto == '/on_calefaccion' or texto == '/on_calefaccion@mayordomoetsist_bot'):
-			bot.sendMessage(telGroup, 'Calefaccion encendida por '+ persona)
 			collected = 'x00x01'
-			robotStateChange()
+			robotStateChange(persona)
 		elif (texto == '/off_calefaccion' or texto == '/off_calefaccion@mayordomoetsist_bot'):
-			bot.sendMessage(telGroup, 'Calefaccion apagada por '+ persona)
 			collected = 'x00x02'
-			robotStateChange()
-		elif (texto == '/obtener_estadisticas' or texto == 'obtener_estadisticas@mayordomoetsist_bot'):
+			robotStateChange(persona)
+		elif (texto == '/obtener_estadisticas' or texto == '/obtener_estadisticas@mayordomoetsist_bot'):
 			try:
 				bot.sendPhoto(telGroup, open('templates/img/temperatura.png','rb'))
 			except Exception as e:
@@ -142,10 +165,14 @@ def lecturaMensajesBot(msg):
 			except Exception as e:
 				bot.sendMessage(telGroup, 'No se han podido enviar los registros de los eventos')
 				print(str(e))
+		elif (texto == '/calefaccion_auto' or texto == '/calefaccion_auto@mayordomoetsist_bot'):
+			collected = 'x00x04'
+			robotStateChange(persona)
 		else:
 			bot.sendMessage(telGroup, "Comando: "+texto+" no valido. Accionado por "+persona)
 
 #params read from control.ini
+temp = None
 tempMin = None
 tempMax = None
 hume = None
@@ -159,23 +186,27 @@ Collected is used to switch between modes and to store the data transfered from 
 x00x01 --> turn on led
 x00x02 --> turn off led
 x00x03 --> read again temp parameters
+x00x04 --> change from manual to auto with telegram
 '''
 collected = None
 led = LED(18)
 bot = None
+noti = None
 
 def main (args):
 	#var to read from config file
 	fileH = fileHandler.FILEHANDLER()
+	global noti
+	noti = notificationHandler.NOTIFICATIONHANDLER()
 
 	try:
 		global collected
 		global cond
 
 		global telToken
-		telToken = fileH.readParam('TelegramToken')
+		telToken = fileH.readParam('telegramtoken')
 		global telGroup
-		telGroup = fileH.readParam('TelegramIDGrupo')
+		telGroup = fileH.readParam('telegramidgrupo')
 		global bot
 		bot = telepot.Bot(telToken)
 		#activa lecturas de comandos por parte del bot
@@ -188,21 +219,21 @@ def main (args):
 			try:
 				#reading config parameters
 				global tempMin
-				tempMin = float(fileH.readParam('TempMin'))
+				tempMin = float(fileH.readParam('tempmin'))
 				global tempMax
-				tempMax = float(fileH.readParam('TempMax'))
+				tempMax = float(fileH.readParam('tempmax'))
 				global hume
-				hume = float(fileH.readParam('Hume'))
+				hume = float(fileH.readParam('hume'))
 				global email
-				email = fileH.readParam('Email')
+				email = fileH.readParam('email')
 				#telegram variables
-				telToken = fileH.readParam('TelegramToken')
-				telGroup = fileH.readParam('TelegramIDGrupo')
+				telToken = fileH.readParam('telegramtoken')
+				telGroup = fileH.readParam('telegramidgrupo')
 
 				global lec
-				lec = float(fileH.readParam('IntervaloLectura'))
+				lec = float(fileH.readParam('intervalolectura'))
 				global mode
-				mode = fileH.readParam('Modo')
+				mode = fileH.readParam('modo')
 				if (mode == 'automatico'):
 					collected = None
 				
