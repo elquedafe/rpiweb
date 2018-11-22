@@ -5,14 +5,21 @@ import smtplib
 class NOTIFICATIONHANDLER:
 	def __init__(self):
 		#twitter
-		self._consumer_key="hq4wypbIiQFPH13QOmKB8t9ss"
-		self._consumer_secret="TQi9r79BET0jimOz1jClQ7z6fLBxGrJoEaUdAexeBzhitb26Ky"
-		self._access_token="1064175532877729792-xMjH9Vx3Ia8Mz4k3teIV1U8c0b7K2a"
-		self._access_token_secret="2WIP9cbOefnW7r8AK6IbclMko05yWlyb0K26PBWIpkCu2"
-
+		self._consumer_key = None
+		self._consumer_secret = None
+		self._access_token = None
+		self._access_token_secret = None
+		readParameters()
 		self._auth = tweepy.OAuthHandler(self._consumer_key, self._consumer_secret)
 		self._auth.set_access_token(self._access_token, self._access_token_secret)
 		self._tweepyapi = tweepy.API(self._auth)
+
+	def readParameters(self):
+		fileH = fileHandler.FILEHANDLER()
+		self._consumer_key = fileH.readParam('tweeterconsumerkey')
+		self._consumer_secret = fileH.readParam('tweeterconsumersecret')
+		self._access_token = fileH.readParam('twetteraccesstoken')
+		self._access_token_secret = fileH.readParam('tweeteraccesstokensecret')
 
 	def sendNotification(self, msg, bot=None, telGroup=None, persona=None):
 		server = smtplib.SMTP('smtp.gmail.com:587')
