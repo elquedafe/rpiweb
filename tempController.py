@@ -247,10 +247,9 @@ def main (args):
 				global hume
 				hume = float(fileH.readParam('hume'))
 				#reading notification variables
-				global email
-				email = fileH.readParam('email')
 				telToken = fileH.readParam('telegramtoken')
 				telGroup = fileH.readParam('telegramidgrupo')
+				noti.readParameters()
 				#reading time interval
 				global lec
 				lec = float(fileH.readParam('intervalolectura'))
