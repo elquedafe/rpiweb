@@ -27,8 +27,9 @@ class NOTIFICATIONHANDLER:
 		server.ehlo()
 		server.starttls()
 		server.ehlo()
-		server.login('mayordomobot', "caputloqueseve")
-		server.sendmail('mayordomobot@gmail.com', 'mayordomobot@gmail.com', msg)
+		fileH = fileHandler.FILEHANDLER()
+		server.login(fileH.readParam('emaillogin'), fileH.readParam('emailpasswd'))
+		server.sendmail(fileH.readParam('email'), fileH.readParam('email'), msg)
 		server.quit()
 
 		if (len(msg)<140):
