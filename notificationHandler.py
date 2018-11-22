@@ -17,10 +17,10 @@ class NOTIFICATIONHANDLER:
 
 	def readParameters(self):
 		fileH = fileHandler.FILEHANDLER()
-		self._consumer_key = fileH.readParam('tweeterconsumerkey')
-		self._consumer_secret = fileH.readParam('tweeterconsumersecret')
-		self._access_token = fileH.readParam('twetteraccesstoken')
-		self._access_token_secret = fileH.readParam('tweeteraccesstokensecret')
+		self._consumer_key = fileH.readParam('twitterconsumerkey')
+		self._consumer_secret = fileH.readParam('twitterconsumersecret')
+		self._access_token = fileH.readParam('twitteraccesstoken')
+		self._access_token_secret = fileH.readParam('twitteraccesstokensecret')
 
 	def sendNotification(self, msg, bot=None, telGroup=None, persona=None):
 		server = smtplib.SMTP('smtp.gmail.com:587')
