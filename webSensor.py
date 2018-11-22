@@ -305,6 +305,24 @@ def estadisticas():
 		return render_template("estadisticas.html")
 	else:
 		return redirect('/')
+
+#LOG
+@app.route('/menu/calefaccion/log')
+def log():
+	global accesGranted
+	if accesGranted:
+		logger = '';
+		with open('eventos.txt', 'r') as f:
+			try:
+				for line in f:
+					print(str(line))
+					logger = logger+line+"</br>"
+			finally:
+				f.close()
+
+		return render_template("log.html", logger=logger)
+	else:
+		return redirect('/')
 #END OF ROUTES
 
 #REAL-TIME READING
@@ -317,7 +335,6 @@ def handleReader(lectura):
 	global p
 	global accesGranted
 	if accesGranted:
-		print('llego aqui')
 		h = None
 		t = None
 		tableTemp = None
