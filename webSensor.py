@@ -210,15 +210,65 @@ def valores():
 		minTemp = None
 		maxTemp = None
 		try:
-			minTemp = fHandler.readParam('TempMin')
-			maxTemp = fHandler.readParam('TempMax')
+			minTemp = fHandler.readParam('tempmin')
+			maxTemp = fHandler.readParam('tempmax')
+			hume = fHandler.readParam('hume')
+			email = fHandler.readParam('email')
+			emaillogin = fHandler.readParam('emaillogin')
+			emailpasswd = fHandler.readParam('emailpasswd')
+			telegramtoken = fHandler.readParam('telegramtoken')
+			telegramidgrupo = fHandler.readParam('telegramidgrupo')
+			twitterconsumerkey = fHandler.readParam('twitterconsumerkey')
+			twitterconsumersecret = fHandler.readParam('twitterconsumersecret')
+			twitteraccesstoken = fHandler.readParam('twitteraccesstoken')
+			twitteraccesstokensecret = fHandler.readParam('twitteraccesstokensecret')
+			intervalolectura = fHandler.readParam('intervalolectura')
+			modo = fHandler.readParam('modo')
 		except Exception as e:
 			print('No se ha podido leer el fichero bien')
 		if request.method == 'POST':
 			minTemp = request.form.get('minTemp')
-			fHandler.writeParam('TempMin',minTemp)
+			if (minTemp is not ''):
+				fHandler.writeParam('TempMin',minTemp)
 			maxTemp = request.form.get('maxTemp')
-			fHandler.writeParam('TempMax',maxTemp)
+			if (maxTemp is not ''):
+				fHandler.writeParam('TempMax',maxTemp)
+			hume = request.form.get('hume')
+			if (hume is not ''):
+				fHandler.writeParam('hume', hume)
+			email = request.form.get('email')
+			if (email is not ''):
+				fHandler.writeParam('email', email)
+			emaillogin = request.form.get('emaillogin')
+			if (emaillogin is not ''):
+				fHandler.writeParam('emaillogin', emaillogin)
+			emailpasswd = request.form.get('emailpasswd')
+			if (emailpasswd is not ''):
+				fHandler.writeParam('emailpasswd', emailpasswd)
+			telegramtoken = request.form.get('telegramtoken')
+			if (telegramtoken is not ''):
+				fHandler.writeParam('telegramtoken', telegramtoken)
+			telegramidgrupo = request.form.get('telegramidgrupo')
+			if (telegramidgrupo is not ''):
+				fHandler.writeParam('telegramidgrupo', telegramidgrupo)
+			twitterconsumerkey = request.form.get('twitterconsumerkey')
+			if (twitterconsumerkey is not ''):
+				fHandler.writeParam('twitterconsumerkey', twitterconsumerkey)
+			twitterconsumersecret = request.form.get('twitterconsumersecret')
+			if (twitterconsumersecret is not ''):
+				fHandler.writeParam('twitterconsumersecret', twitterconsumersecret)
+			twitteraccesstoken = request.form.get('twitteraccesstoken')
+			if (twitteraccesstoken is not ''):
+				fHandler.writeParam('twitteraccesstoken', twitteraccesstoken)
+			twitteraccesstokensecret = request.form.get('twitteraccesstokensecret')
+			if (twitteraccesstokensecret is not ''):
+				fHandler.writeParam('twitteraccesstokensecret', twitteraccesstokensecret)
+			intervalolectura = request.form.get('intervalolectura')
+			if (intervalolectura is not ''):
+				fHandler.writeParam('intervalolectura', intervalolectura)
+			modo = request.form.get('modo')
+			if (modo is not ''):
+				fHandler.writeParam('modo', modo)
 			#tell the robot to read again the params from file
 			try:
 				s = socket.socket()
@@ -232,7 +282,19 @@ def valores():
 
 		tempData = {
 			'minTemp' : minTemp,
-			'maxTemp' : maxTemp
+			'maxTemp' : maxTemp,
+			'hume' : hume,
+			'email': email,
+			'emaillogin': emaillogin,
+			'emailpasswd': emailpasswd,
+			'telegramtoken': telegramtoken,
+			'telegramidgrupo': telegramidgrupo,
+			'twitterconsumerkey': twitterconsumerkey,
+			'twitterconsumersecret': twitterconsumersecret,
+			'twitteraccesstoken': twitteraccesstoken,
+			'twitteraccesstokensecret': twitteraccesstokensecret,
+			'intervalolectura': intervalolectura,
+			'modo': modo
 		}
 		return render_template("cambioValores.html", **tempData)
 	else:
@@ -306,6 +368,21 @@ def estadisticas():
 	else:
 		return redirect('/')
 
+@app.route('/menu/calefaccion/fin')
+def finPrograma():
+	global accesGranted
+	if accesGranted:
+		try:
+			
+			s = socket.socket()
+			s.connect(('127.0.0.1', 65000))
+			s.send(b'x00x05')
+			s.close()
+		except Exception as e:
+			print(e)
+		return redirect("/menu/calefaccion", code=302)
+	else:
+		return redirect('/')
 #LOG
 @app.route('/menu/calefaccion/log')
 def log():
