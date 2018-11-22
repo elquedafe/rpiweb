@@ -1,6 +1,7 @@
 import tweepy
 import telepot
 import smtplib
+import fileHandler
 
 class NOTIFICATIONHANDLER:
 	def __init__(self):
@@ -9,7 +10,7 @@ class NOTIFICATIONHANDLER:
 		self._consumer_secret = None
 		self._access_token = None
 		self._access_token_secret = None
-		readParameters()
+		self.readParameters()
 		self._auth = tweepy.OAuthHandler(self._consumer_key, self._consumer_secret)
 		self._auth.set_access_token(self._access_token, self._access_token_secret)
 		self._tweepyapi = tweepy.API(self._auth)
