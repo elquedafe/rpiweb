@@ -1,5 +1,6 @@
 import mysql.connector as mariadb
 import pprint
+import hashlib
 class USERHANDLER:
 	def __init__(self):
 		try:
@@ -11,9 +12,24 @@ class USERHANDLER:
 
 	def getAccess(self, user, passwd):
 		result = False
-		query = "SELECT Username, Password FROM User WHERE Username='"+user+"' AND Password='"+passwd+"'"
+		query = "SELECT Username, Password FROM User WHERE Username='"+user+"'"
 		self._cursor.execute(query)
 		for userDatabase, passwdDatabase in self._cursor:
-			if(userDatabase==user and passwdDatabase==passwd):
-				result = True
+			result = self._checkPassword(passwdDatabase, passwd)
 		return result
+
+	def changePassword(self, username, newPassword):
+		passwordEncrypted = self._encryptPassword(newPassword)
+		query = "UPDATE User SET Password='"+passwordEncrypted+"' WHERE Username='"+username+"'"
+		print(query)
+		self._cursor.execute(query)
+		self._mariadb_connection.commit()
+		print("affected rows = {}".format(self._cursor.rowcount)) #traza para saber el numero de tuplas afectadas
+
+
+	def _encryptPassword(self, password):
+		sha_signature = hashlib.sha256(password.encode()).hexdigest()
+		return sha_signature
+
+	def _checkPassword(self, dbPass, userPass):
+		return dbPass == hashlib.sha256(userPass.encode()).hexdigest()
