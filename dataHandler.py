@@ -8,198 +8,151 @@ from datetime import datetime
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import os
+import pandas as pd
 
-def obtenerDatos():
-	temps=[]
-	hums=[]
-	dates=[]
-	with open('lecturas.txt', 'r') as f:
-		try:
-			for line in f:
-				words = line.split('\t')
-				dates.append(words[0])
-				temps.append(words[1])
-				hums.append(words[2])
-		finally:
-			f.close()
-	return dates, temps, hums	
+def printDataFrame(dataFrame):
+	with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+		print(dataFrame)
 
-#automata que lee el fichero de texto para obtener datos y agrupar
-def agruparMinutos(temps, hums, dates):
-	tempAux = []
-	dateAux = []
-	humAux = []
-	tempAgrupada = []
-	datesAgrupada = []
-	humAgrupada = []
-	temperatura = None
-	humedad = None
-	tempAuxi = 0.0
-	humeAuxi = 0
-	date = None
-	primero = True
-	
-	for i in range(0, len(temps)):
-		if primero==True:
-			tempAux.append(temps[i])
-			dateAux.append(dates[i])
-			humAux.append(hums[i])
-			print('PRIMERO:')
-			print(tempAux)
-			primero=False
-		else:
-			#Si es de la misma hora que la entrada anterior
-			feAct = datetime.strptime(dates[i],'%Y-%m-%d %H:%M:%S.%f')
-			feAnt = datetime.strptime(dates[i-1],'%Y-%m-%d %H:%M:%S.%f')
+def addToArrays(date, temp, hum):
+	global dates
+	global temps
+	global hums
+	dates.append(date)
+	temps.append(temp)
+	hums.append(hum)
 
-			#print(str(feAct.year)+'-'+str(feAct.month)+'-'+str(feAct.day)+' '+str(feAct.hour)+':'+str(feAct.minute))
-			#print(str(feAnt.year)+'-'+str(feAnt.month)+'-'+str(feAnt.day)+' '+str(feAnt.hour)+':'+str(feAnt.minute))
-			if ( (feAct.year==feAnt.year) and  (feAct.month==feAnt.month) and (feAct.day==feAnt.day) and (feAct.hour==feAnt.hour) ):
-				#Si minuto entre 0 y 15
-				if ( ((feAnt.minute>=0) and (feAnt.minute<15)) and (feAct.minute>=15) ):
-					print(str(feAct.year)+'-'+str(feAct.month)+'-'+str(feAct.day)+' '+str(feAct.hour)+':'+str(feAct.minute)+'-->'+str(feAnt.year)+'-'+str(feAnt.month)+'-'+str(feAnt.day)+' '+str(feAnt.hour)+':'+str(feAnt.minute))
-					print(tempAux)
-					
-					tempAux, humAux, tempAgrupada, datesAgrupada, humAgrupada = agrupacionMinutos(tempAux, humAux, tempAgrupada, datesAgrupada, humAgrupada, i, dates)
+def emptyArrays():
+	global dates
+	global temps
+	global hums
+	dates = []
+	temps = []
+	hums = []
 
-					primero = True
-					#primero de la iteracion
-					tempAux.append(temps[i])
-					dateAux.append(dates[i])
-					humAux.append(hums[i])
-					print(tempAux)
-
-				#Si minuto entre 15 y 30
-				elif ((feAnt.minute>=15) and (feAnt.minute<30) and (feAct.minute>=30) ):
-					print(str(feAct.year)+'-'+str(feAct.month)+'-'+str(feAct.day)+' '+str(feAct.hour)+':'+str(feAct.minute)+'-->'+str(feAnt.year)+'-'+str(feAnt.month)+'-'+str(feAnt.day)+' '+str(feAnt.hour)+':'+str(feAnt.minute))
-					print(tempAux)
-					
-					tempAux, humAux, tempAgrupada, datesAgrupada, humAgrupada = agrupacionMinutos(tempAux, humAux, tempAgrupada, datesAgrupada, humAgrupada, i, dates)
-
-					primero = True
-					#primero de la iteracion
-					tempAux.append(temps[i])
-					dateAux.append(dates[i])
-					humAux.append(hums[i])
-					print(tempAux)
-
-					
-				#Si minuto entre 30 y 45
-				elif ((feAnt.minute>=30) and (feAnt.minute<45) and (feAct.minute>=45) ):
-					print(str(feAct.year)+'-'+str(feAct.month)+'-'+str(feAct.day)+' '+str(feAct.hour)+':'+str(feAct.minute)+'-->'+str(feAnt.year)+'-'+str(feAnt.month)+'-'+str(feAnt.day)+' '+str(feAnt.hour)+':'+str(feAnt.minute))
-					print(tempAux)
-					
-					tempAux, humAux, tempAgrupada, datesAgrupada, humAgrupada = agrupacionMinutos(tempAux, humAux, tempAgrupada, datesAgrupada, humAgrupada, i, dates)
-
-					primero = True
-					#primero de la iteracion
-					tempAux.append(temps[i])
-					dateAux.append(dates[i])
-					humAux.append(hums[i])
-					print(tempAux)
-					
-				#Si minuto entre 45 y 60
-				elif ((feAnt.minute>=45) and (feAnt.minute<60) and ((feAct.minute>=0) and ((feAct.minute<45)))):
-					print(str(feAct.year)+'-'+str(feAct.month)+'-'+str(feAct.day)+' '+str(feAct.hour)+':'+str(feAct.minute)+'-->'+str(feAnt.year)+'-'+str(feAnt.month)+'-'+str(feAnt.day)+' '+str(feAnt.hour)+':'+str(feAnt.minute))
-					print(tempAux)
-					
-					tempAux, humAux, tempAgrupada, datesAgrupada, humAgrupada = agrupacionMinutos(tempAux, humAux, tempAgrupada, datesAgrupada, humAgrupada, i, dates)
-
-					primero = True
-					#primero de la iteracion
-					tempAux.append(temps[i])
-					dateAux.append(dates[i])
-					humAux.append(hums[i])
-					print(tempAux)
-
-				else:
-					tempAux.append(temps[i])
-					dateAux.append(dates[i])
-					humAux.append(hums[i])
-					print('ELSE elsif:')
-					print(tempAux)
-
-
-
-			else:
-				tempAux.append(temps[i])
-				dateAux.append(dates[i])
-				humAux.append(hums[i])
-				print('ELSE RAIZ:')
-				print(tempAux)
-
-	return tempAgrupada, humAgrupada, datesAgrupada
-
-def agruparHoras(tempAux, humAux, tempAgrupada, datesAgrupada, humAgrupada):
-	tempAuxi = 0.0
-	humAuxi = 0
-
-	for t in tempAux:
-
-		tempAuxi += float(t)
-		#print(str(tempAuxi))
-	for h in humAux:
-		h = h.replace('\n', '')
-		humAuxi += int(h)
-
-	temperatura = float(tempAuxi)/len(tempAux)
-	humedad = int(humAuxi)/len(humAux)
-	fecha = datetime.strptime(dates[i-1],'%Y-%m-%d %H:%M:%S.%f')
-	date = str(fecha.year)+'-'+str(fecha.month)+'-'+str(fecha.day)+' '+str(fecha.hour)+':00'
-	
-	tempAgrupada.append(temperatura)
-	datesAgrupada.append(date)
-	humAgrupada.append(humedad)
-
-	tempAux = []
-	dateAux = []
-
-	return tempAux, humAux, tempAgrupada, datesAgrupada, humAgrupada
-
-#agrupa cada 15 minutos
-def agrupacionMinutos(tempAux, humAux, tempAgrupada, datesAgrupada, humAgrupada, i, dates):
+def computeAvg():
+	global dates
+	global temps
+	global hums
+	global outDates
+	global outTemps
+	global outHums
 	tempAuxi = 0.0
 	humAuxi = 0.0
-	for t in tempAux:
+
+	for t in temps:
 		tempAuxi += float(t)
-		#print(str(tempAuxi))
-	for h in humAux:
+	for h in hums:
 		humAuxi += float(h)
-	temperatura = float(tempAuxi)/len(tempAux)
-	humedad = float(humAuxi)/len(humAux)
+	temperature = float(tempAuxi)/len(temps)
+	humidity = float(humAuxi)/len(hums)
+	date = str(dates[-1].year)+'-'+str(dates[-1].month)+'-'+str(dates[-1].day)+' '+str(dates[-1].hour)+':'
+	if( (dates[-1].minute >= 0) and (dates[-1].minute < 10) ):
+		date = date+'0'+str(dates[-1].minute)
+	else:
+		date = date+str(dates[-1].minute)
 
-	fecha = datetime.strptime(dates[i-1],'%Y-%m-%d %H:%M:%S.%f')
-	date = str(fecha.year)+'-'+str(fecha.month)+'-'+str(fecha.day)+' '+str(fecha.hour)+':'+str(fecha.minute)
-	
-	print('fecha guardada')
-	print(date)
+	outDates.append(date)
+	outTemps.append(temperature)
+	outHums.append(humidity)
 
-	tempAgrupada.append(temperatura)
-	datesAgrupada.append(date)
-	humAgrupada.append(humedad)
+def processRows(row):
+	global dates
+	global temps
+	global hums
+	global firstRowDate
+	global firstRead
+	minutes = 15
+	seconds = minutes*60
 
-	tempAux = []
-	dateAux = []
+	#Lectura del dataframe
+	currentRowDate = row['date']
+	currentRowDate = datetime.strptime(currentRowDate,'%Y-%m-%d %H:%M:%S.%f') # New format: 2018-11-01 hh:mm:ss:ms
+	currentRowTemp = row['temperature']
+	currentRowHum = row['humidity']
+	if(firstRead == False):
+		#Si se diferencia en menos de 15 minutos de la primera lectura
+		if( (currentRowDate-firstRowDate).total_seconds() < 900.0):
+			addToArrays(currentRowDate, currentRowTemp, currentRowHum)
+		else:
+			computeAvg()
+			emptyArrays()
+			addToArrays(currentRowDate, currentRowTemp, currentRowHum)
+			firstRowDate = currentRowDate
+	else:
+		firstRead = False
+		firstRowDate = currentRowDate
+		addToArrays(currentRowDate, currentRowTemp, currentRowHum)
+	#print(dates)
 
-	return tempAux, humAux, tempAgrupada, datesAgrupada, humAgrupada
+def computeLast():
+	global dates
+	global temps
+	global hums
+	global firstRowDate
+	global firstRead
+	minutes = 15
+	seconds = minutes*60
 
-def stats(temp, time, hum, numeroItemsPlot):
+	#completar
+
+
+def readDataFile():
+	df = pd.read_csv('lecturas.txt', sep="\t", header=None, names = ['date','temperature','humidity'])
+	#printDataFrame(df)
+	#df = df.set_index('date')
+	#printDataFrame(df)
+	df.apply(processRows, axis=1)
+	computeLast()
+
+def plotStatistics(numeroItemsPlot):
+	global outDates
+	global outTemps
+	global outHums
+	print(outTemps)
 	x = []
 	
-	for i in range(0, len(time)):
+	for i in range(0, len(outDates)):
 		x.append(i)
 	
 	#plot temp
 	plt.ylim([-40, 80])
-	plt.plot(x[-numeroItemsPlot:], temp[-numeroItemsPlot:])
+	plt.plot(x[-numeroItemsPlot:], outTemps[-numeroItemsPlot:], '--o')
 	plt.gcf().autofmt_xdate()
-	plt.xticks(x[-numeroItemsPlot:], time[-numeroItemsPlot:])
+	plt.xticks(x[-numeroItemsPlot:], outDates[-numeroItemsPlot:])
 	#plt.show()
 	plt.savefig('templates/img/temperatura.png')
+	plt.close()
 	#plot humedad
 	plt.ylim([0, 100])
-	plt.plot(x[-numeroItemsPlot:], hum[-numeroItemsPlot:])
+	plt.plot(x[-numeroItemsPlot:], outHums[-numeroItemsPlot:], '--o')
 	plt.gcf().autofmt_xdate()
-	plt.xticks(x[-numeroItemsPlot:], time[-numeroItemsPlot:])
+	plt.xticks(x[-numeroItemsPlot:], outDates[-numeroItemsPlot:])
 	#plt.show()
 	plt.savefig('templates/img/humedad.png')
+	plt.close()
+
+# Variables globales
+dates = []
+temps = []
+hums = []
+outDates = []
+outTemps = []
+outHums = []
+firstRowDate = 0
+firstRead = True
+
+def main():
+	numeroItemsPlot = 15
+	if(os.path.isfile('templates/img/temperatura.png')):
+		print('elimnartemp')
+		os.remove("templates/img/temperatura.png")	
+	if(os.path.isfile('templates/img/humedad.png')):
+		print('elimnarhume')
+		os.remove("templates/img/humedad.png")
+	readDataFile()
+	plotStatistics(numeroItemsPlot)
+
+if __name__ == "__main__":
+	main()
