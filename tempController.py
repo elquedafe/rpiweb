@@ -14,6 +14,7 @@ from telepot.loop import MessageLoop
 
 
 def serverThread(cond, kill):
+	time.sleep(1)
 	socket_s = socket.socket()
 	socket_s.bind(('127.0.0.1', 65000))
 	socket_s.listen(1)
@@ -35,9 +36,11 @@ def serverThread(cond, kill):
 		except Exception as e:
 			print(e)
 		finally:
-			conn.close()	
+			conn.close()
 
-def robotStateChange(persona=None):
+	print('termina hilo server')	
+
+def robotStateChange(kill, persona=None):
 	#global variables needed
 	global collected
 	global led
@@ -45,8 +48,6 @@ def robotStateChange(persona=None):
 	global bot
 	global telGroup
 	global temp
-	global kill
-
 	global mode
 
 	print('Temperatura: '+str(temp)+' -- '+'modo: '+mode+' --- ')
@@ -84,57 +85,78 @@ def robotStateChange(persona=None):
 	collected = None
 
 def robotThread(cond, kill):
+	time.sleep(1)
 	#global variables needed for the robot to run
 	global bot
 	global temp
 	global led
 	global noti
 
-	#robot tasks
-	if (mode == 'automatico'):
-		#robot starts processing information
-		bot = telepot.Bot(telToken) #var to send messages
+	#var to read from config file
+	fileH = fileHandler.FILEHANDLER()
+
+	while (not kill.is_set()):
+		#read parameters
+		tempMin = float(fileH.readParam('tempmin'))
+		tempMax = float(fileH.readParam('tempmax'))
+		hume = float(fileH.readParam('hume'))
+		#reading notification variables
+		global telToken
+		telToken = fileH.readParam('telegramtoken')
+		global telGroup
+		telGroup = fileH.readParam('telegramidgrupo')
+		noti.readParameters()
+		#reading time interval
+		lec = float(fileH.readParam('intervalolectura'))
+		#reading mode
+		global mode
+		mode = fileH.readParam('modo')
 		
-		notification = False #number of notifications is limit to 1 per on/off
-		cond.acquire()
-		while collected == None and (not kill.is_set()):
+		#robot tasks
+		if (mode == 'automatico'):
+			#robot starts processing information
+			bot = telepot.Bot(telToken) #var to send messages
+			
+			notification = False #number of notifications is limit to 1 per on/off
+			cond.acquire()
+			while collected == None:
+				cond.notify()
+				cond.release()
+				wEvent = open("eventos.txt", "a") #var to write events
+				if (tempMax > temp):
+					if (notification == False):
+						noti.sendNotification('Auto: se enciende la calefaccion --- temperatura actual: '+str(temp)+' Celsius '+str(datetime.datetime.now()), bot, telGroup)
+						notification = True
+						led.on()
+						wEvent.write(format(datetime.datetime.now())+"\t"+str(temp)+"\tencendido\n")
+				
+				if (tempMax < temp):
+					if notification:
+						led.off()
+						wEvent.write(format(datetime.datetime.now())+"\t"+str(temp)+"\tapagado\n")
+						noti.sendNotification('Auto: se apaga la calefaccion --- temperatura actual: '+str(temp)+' Celsius '+str(datetime.datetime.now()), bot, telGroup)
+						notification = False
+				wEvent.close()
+				time.sleep(lec)
+				cond.acquire()
+
 			cond.notify()
 			cond.release()
-			wEvent = open("eventos.txt", "a") #var to write events
-			if (tempMax > temp):
-				if (notification == False):
-					noti.sendNotification('Auto: se enciende la calefaccion --- temperatura actual: '+str(temp)+' Celsius '+str(datetime.datetime.now()), bot, telGroup)
-					notification = True
-					led.on()
-					wEvent.write(format(datetime.datetime.now())+"\t"+str(temp)+"\tencendido\n")
-			
-			if (tempMax < temp):
-				if notification:
-					led.off()
-					wEvent.write(format(datetime.datetime.now())+"\t"+str(temp)+"\tapagado\n")
-					noti.sendNotification('Auto: se apaga la calefaccion --- temperatura actual: '+str(temp)+' Celsius '+str(datetime.datetime.now()), bot, telGroup)
-					notification = False
-			wEvent.close()
-			time.sleep(lec)
+		else:
+			#manual mode
+			#wait for user interaction
 			cond.acquire()
+			while collected == None:
+				print('voy a dormir')
+				cond.wait()
+			print('estoy despierto')
+			cond.release()
 
-		cond.notify()
-		cond.release()
-	else:
-		#manual mode
-		#wait for user interaction
-		cond.acquire()
-		while collected == None and (not kill.is_set()):
-			print('voy a dormir')
-			cond.wait()
-		print('estoy despierto')
-		cond.release()
-
-	robotStateChange()
-
+		robotStateChange(kill) #change state
+	print('termina hilo robot')
 
 # Logica de comandos de Telegram
-def lecturaMensajesBot(msg):
+def lecturaMensajesBot(msg, kill):
 	global bot
 	global collected
 	#telGroup = int(telGroup)
@@ -144,56 +166,42 @@ def lecturaMensajesBot(msg):
 	userName = msg['from']['username']
 	texto = msg['text'] #Mensaje escrito por el usuario
 	persona = firstName+" "+lastName+" --> ("+userName+")"
+	if (not kill.is_set()):
+		if(texto[0] == '/'):
+			if (texto == '/on_calefaccion' or texto == '/on_calefaccion@mayordomoetsist_bot'):
+				collected = 'x00x01'
+				robotStateChange(None, persona)
+			elif (texto == '/off_calefaccion' or texto == '/off_calefaccion@mayordomoetsist_bot'):
+				collected = 'x00x02'
+				robotStateChange(None, persona)
+			elif (texto == '/obtener_estadisticas' or texto == '/obtener_estadisticas@mayordomoetsist_bot'):
+				try:
+					bot.sendPhoto(telGroup, open('templates/img/temperatura.png','rb'))
+				except Exception as e:
+					bot.sendMessage(telGroup, 'No se han podido enviar las estadisticas de temperatura')
+					print(str(e))
+				try:
+					bot.sendPhoto(telGroup, open('templates/img/humedad.png','rb'))
+				except Exception as e:
+					bot.sendMessage(telGroup, 'No se han podido enviar las estadisticas de humedad')
+					print(str(e))
+			elif (texto == '/obtener_registros' or texto == '/obtener_registros@mayordomoetsist_bot'):
+				try:
+					bot.sendDocument(telGroup, open('eventos.txt','rb'))
+				except Exception as e:
+					bot.sendMessage(telGroup, 'No se han podido enviar los registros de los eventos')
+					print(str(e))
+			elif (texto == '/calefaccion_auto' or texto == '/calefaccion_auto@mayordomoetsist_bot'):
+				collected = 'x00x04'
+				robotStateChange(None, persona)
+			else:
+				bot.sendMessage(telGroup, "Comando: "+texto+" no valido. Accionado por "+persona)
 
-	if(texto[0] == '/'):
-		if (texto == '/on_calefaccion' or texto == '/on_calefaccion@mayordomoetsist_bot'):
-			collected = 'x00x01'
-			robotStateChange(persona)
-		elif (texto == '/off_calefaccion' or texto == '/off_calefaccion@mayordomoetsist_bot'):
-			collected = 'x00x02'
-			robotStateChange(persona)
-		elif (texto == '/obtener_estadisticas' or texto == '/obtener_estadisticas@mayordomoetsist_bot'):
-			try:
-				bot.sendPhoto(telGroup, open('templates/img/temperatura.png','rb'))
-			except Exception as e:
-				bot.sendMessage(telGroup, 'No se han podido enviar las estadisticas de temperatura')
-				print(str(e))
-			try:
-				bot.sendPhoto(telGroup, open('templates/img/humedad.png','rb'))
-			except Exception as e:
-				bot.sendMessage(telGroup, 'No se han podido enviar las estadisticas de humedad')
-				print(str(e))
-		elif (texto == '/obtener_registros' or texto == '/obtener_registros@mayordomoetsist_bot'):
-			try:
-				bot.sendDocument(telGroup, open('eventos.txt','rb'))
-			except Exception as e:
-				bot.sendMessage(telGroup, 'No se han podido enviar los registros de los eventos')
-				print(str(e))
-		elif (texto == '/calefaccion_auto' or texto == '/calefaccion_auto@mayordomoetsist_bot'):
-			collected = 'x00x04'
-			robotStateChange(persona)
-		else:
-			bot.sendMessage(telGroup, "Comando: "+texto+" no valido. Accionado por "+persona)
-
-def readTemp(kill):
-	global temp
-	sensor = proxy.PROXY() #creating sensor
-	while not kill.is_set():
-		temp = sensor.leerTem()
-		time.sleep(1)
-	sensor.close()
-
-
+mode = None
 temp = None
 #params read from control.ini needed in children threads
-tempMin = None
-tempMax = None
-hume = None
 telToken = None
 telGroup = None
-email = None
-lec = None
-mode = None
 '''
 Collected is used to switch between modes and to store the data transfered from webServer
 x00x01 --> turn on led
@@ -206,21 +214,17 @@ collected = None
 led = LED(18) #GPIO
 bot = None #telegram
 noti = None #all notifications
-kill = None #it can kill the threads
 
 def main (args):
-	#var to read from config file
-	fileH = fileHandler.FILEHANDLER()
-
-	#notification initialization
+	global collected
+	global cond #needed for thread sync
 	global noti
-	noti = notificationHandler.NOTIFICATIONHANDLER()
-
-	#program
+	
 	try:
-		global collected
-		global cond #needed for thread sync
+		fileH = fileHandler.FILEHANDLER() #var to read from config file
+		noti = notificationHandler.NOTIFICATIONHANDLER()
 
+		kill = threading.Event()
 		#initializing telegram thread
 		global telToken
 		telToken = fileH.readParam('telegramtoken')
@@ -229,48 +233,29 @@ def main (args):
 		global bot
 		bot = telepot.Bot(telToken)
 		#starting telegram thread
-		MessageLoop(bot, lecturaMensajesBot).run_as_thread()
+		MessageLoop(bot, lecturaMensajesBot).run_as_thread(kill)
 		
-		kill = threading.Event()
+		#initializing the rest of the threads
 		#starting the other threads
 		cond = threading.Condition()
 		serv = threading.Thread(target=serverThread, args=(cond, kill,)) #thread which communicates with web server
-		serv.start()
-		
-		while not kill.is_set():
-			try:
-				#reading temp & hume variables
-				global tempMin
-				tempMin = float(fileH.readParam('tempmin'))
-				global tempMax
-				tempMax = float(fileH.readParam('tempmax'))
-				global hume
-				hume = float(fileH.readParam('hume'))
-				#reading notification variables
-				telToken = fileH.readParam('telegramtoken')
-				telGroup = fileH.readParam('telegramidgrupo')
-				noti.readParameters()
-				#reading time interval
-				global lec
-				lec = float(fileH.readParam('intervalolectura'))
-				#reading mode
-				global mode
-				mode = fileH.readParam('modo')
-				if (mode == 'automatico'):
-					collected = None
+		robot = threading.Thread(target=robotThread, args=(cond, kill))
 
-				#thread that reads temp value periodically
-				tempThread = threading.Thread(target=readTemp, args=(kill,))
-				tempThread.start()
-				time.sleep(1) #needed to wait for the first temp lecture
-				#starting robot
-				robot = threading.Thread(target=robotThread, args=(cond, kill))
-				robot.start()
-				robot.join()
-			except telepot.exception.TelegramError as e:
-				print(e)
-		tempThread.join()
+		serv.start()
+		robot.start()
+
+		#the main thread will be reading temp
+		global temp
+		sensor = proxy.PROXY() #creating sensor
+
+		while (not kill.is_set()):
+			temp = sensor.leerTem()
+			time.sleep(1)
+		sensor.close()
+		print('sale bucle en el main')
+		#finish the program
 		serv.join()
+		robot.join()
 	except Exception as e:
 		print (e)
 
