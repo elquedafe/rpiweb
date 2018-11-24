@@ -10,6 +10,7 @@ import proxy
 import userHandler
 import dataHandler
 import fileHandler
+import threading
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret'
@@ -87,6 +88,34 @@ def barraHum(h):
 	if (h>90):
 		tableHum += '<div style="font-size:14px; margin-left:'+str(h)+'%"><i>'+str(h)+'%</i></div>'
 	return tableHum
+
+#callback function for timeout
+def logoutUser(*args):
+	global usersLogged
+	ip = str(args[0])
+
+	try:
+		user = usersLogged[ip]
+		if ip in usersLogged:
+			uH = userHandler.USERHANDLER()
+			uH.logout(user)
+			usersLogged.pop(ip)
+			print(ip+' session closed')
+	except Exception as e:
+		pass
+	finally:
+		uH.close()
+
+#reset function for timeout
+def resetTimeout(ip):
+	global usersLogged
+	global timers
+	fH = fileHandler.FILEHANDLER() 
+
+	timers[ip].cancel()#parar el timeout
+	timers[ip] = threading.Timer(int(fH.readParam('usertimeout')), logoutUser, [ip]) #crear nuevo timeout
+	timers[ip].start() #iniciar timeout
+
 #END INTERNAL METHODS
 
 #ROUTES
@@ -102,27 +131,34 @@ def logout():
 			usersLogged.pop(ip)
 	except Exception as e:
 		pass
+	finally:
+		uH.close()
 	return redirect('/')
 
 @app.route('/', methods = ['POST', 'GET'])
 def index():
 	global usersLogged
+	global timers
 	accessGranted= False
 	if(request.remote_addr in usersLogged):
 		accessGranted = True
-	print(accessGranted)
 	if request.method == 'POST':
 		print('***POST***')
 		user = request.form.get('user')
 		passwd = request.form.get('passwd')
 		ip = request.remote_addr
-		uH = userHandler.USERHANDLER()
-		accessGranted = uH.getAccess(user, passwd, ip)
-		print(accessGranted)
-		print(ip)
+		try:
+			uH = userHandler.USERHANDLER()
+			accessGranted = uH.getAccess(user, passwd, ip)
+		except Exception as e:
+			print(str(e))
+		finally:
+			uH.close()
 		if (accessGranted):
+			fH = fileHandler.FILEHANDLER()
+			timers[ip] = threading.Timer(int(fH.readParam('usertimeout')), logoutUser, [ip])
+			timers[ip].start()
 			usersLogged[ip] = user
-			print(usersLogged)
 			templateData = {
 			'warningAccess' : False,
 			'accesGranted' : accessGranted
@@ -144,14 +180,17 @@ def index():
 def menu():
 	global usersLogged
 	if request.remote_addr in usersLogged:
+		resetTimeout(request.remote_addr)
 		return render_template('menu.html')
 	else:
 		return redirect('/')
+
 @app.route('/temp/<opcion>')
 def tempHum(opcion):
 	global p
 	global usersLogged
 	if request.remote_addr in usersLogged:
+		resetTimeout(request.remote_addr)
 		p = proxy.PROXY()
 		h = None
 		t = None
@@ -189,6 +228,7 @@ def raspImg(opcion):
 def calefaccion():
 	global usersLogged
 	if request.remote_addr in usersLogged:
+		resetTimeout(request.remote_addr)
 		return render_template('menuCalefaccion.html')
 	else:
 		return redirect('/')
@@ -197,6 +237,7 @@ def calefaccion():
 def calefaccionOn():
 	global usersLogged
 	if request.remote_addr in usersLogged:
+		resetTimeout(request.remote_addr)
 		try:
 			s = socket.socket()
 			s.connect(('127.0.0.1', 65000))
@@ -212,6 +253,7 @@ def calefaccionOn():
 def calefaccionOff():
 	global usersLogged
 	if request.remote_addr in usersLogged:
+		resetTimeout(request.remote_addr)
 		try:
 			s = socket.socket()
 			s.connect(('127.0.0.1', 65000))
@@ -227,6 +269,7 @@ def calefaccionOff():
 def valores():
 	global usersLogged
 	if request.remote_addr in usersLogged:
+		resetTimeout(request.remote_addr)
 		fHandler = fileHandler.FILEHANDLER()
 		minTemp = None
 		maxTemp = None
@@ -325,6 +368,7 @@ def valores():
 def calefaccionModoManual():
 	global usersLogged
 	if request.remote_addr in usersLogged:
+		resetTimeout(request.remote_addr)
 		try:
 			fHandler = fileHandler.FILEHANDLER()
 			fHandler.writeParam('Modo','manual')
@@ -334,7 +378,7 @@ def calefaccionModoManual():
 			s.send(b'x00x03')
 			s.close()
 		except Exception as e:
-			print(e)
+			print(str(e))
 		return redirect("/menu/calefaccion", code=302)
 	else:
 		return redirect('/')
@@ -343,6 +387,7 @@ def calefaccionModoManual():
 def calefaccionModoAutomatico():
 	global usersLogged
 	if request.remote_addr in usersLogged:
+		resetTimeout(request.remote_addr)
 		try:
 			fHandler = fileHandler.FILEHANDLER()
 			fHandler.writeParam('Modo','automatico')
@@ -352,7 +397,7 @@ def calefaccionModoAutomatico():
 			s.send(b'x00x03')
 			s.close()
 		except Exception as e:
-			print(e)
+			print(str(e))
 		return redirect("/menu/calefaccion", code=302)
 	else:
 		return redirect('/')
@@ -362,6 +407,7 @@ def calefaccionModoAutomatico():
 def estadisticas():
 	global usersLogged
 	if request.remote_addr in usersLogged:
+		resetTimeout(request.remote_addr)
 		
 		fHandler = fileHandler.FILEHANDLER()
 		numeroItemsPlot = int(fHandler.readParam('numberxaxis'))
@@ -378,6 +424,7 @@ def estadisticas():
 def finPrograma():
 	global usersLogged
 	if request.remote_addr in usersLogged:
+		resetTimeout(request.remote_addr)
 		try:
 			
 			s = socket.socket()
@@ -385,7 +432,7 @@ def finPrograma():
 			s.send(b'x00x05')
 			s.close()
 		except Exception as e:
-			print(e)
+			print(str(e))
 		return redirect("/menu/calefaccion", code=302)
 	else:
 		return redirect('/')
@@ -394,11 +441,11 @@ def finPrograma():
 def log():
 	global usersLogged
 	if request.remote_addr in usersLogged:
+		resetTimeout(request.remote_addr)
 		logger = '';
 		with open('eventos.txt', 'r') as f:
 			try:
 				for line in f:
-					print(str(line))
 					logger = logger+line+"</br>"
 			finally:
 				f.close()
@@ -450,5 +497,6 @@ def handleReader(lectura):
 
 p = None #Proxy as global variable
 usersLogged = {} #dictionary with users currently logged
+timers = {}
 if __name__ == '__main__':
 	socketio.run(app, host='0.0.0.0', debug=True)

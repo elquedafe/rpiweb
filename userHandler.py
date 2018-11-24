@@ -12,8 +12,7 @@ class USERHANDLER:
 
 	def getAccess(self, user, passwd, ip):
 		result = False
-		query = "SELECT Username, Password FROM User WHERE Username='"+user+"'"
-		self._cursor.execute(query)
+		self._cursor.execute("SELECT Username, Password FROM User WHERE Username=%s", (user,))
 		for userDatabase, passwdDatabase in self._cursor:
 			result = self._checkPassword(passwdDatabase, passwd)
 			if(result == True):
@@ -22,11 +21,8 @@ class USERHANDLER:
 
 	def changePassword(self, username, newPassword):
 		passwordEncrypted = self._encryptPassword(newPassword)
-		query = "UPDATE User SET Password='"+passwordEncrypted+"' WHERE Username='"+username+"'"
-		print(query)
-		self._cursor.execute(query)
+		self._cursor.execute("""UPDATE User SET Password=%s WHERE Username=%s""", (passwordEncrypted, username))
 		self._mariadb_connection.commit()
-		print("affected rows = {}".format(self._cursor.rowcount)) #traza para saber el numero de tuplas afectadas
 
 
 	def _encryptPassword(self, password):
@@ -43,3 +39,6 @@ class USERHANDLER:
 	def logout(self, user):
 		self._cursor.execute("""UPDATE User SET ClientHostname=%s, Attached=%s WHERE Username=%s""", (None, '0', user))
 		self._mariadb_connection.commit()
+
+	def close(self):
+		self._mariadb_connection.close()
