@@ -10,10 +10,127 @@
 		<link id="stylesheet" rel="stylesheet" href='../static/style.css' />
 	</head>
 	<body>
+		<!-- socketio -->
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.js" charset="utf-8">
+		</script>
+		<script>
+			const socket = io();
+			socket.emit('lectura', window.location.pathname);
+			socket.on('lect', function(lectura){
+				var temp = lectura['temp'];
+				var hum = lectura['hum'];
+				var tableTemp = lectura['tableTemp'];
+				var tableHum =lectura['tableHum'];
+
+				//Reescritura de medidas y barras
+				if (temp != null)
+					document.getElementById("temperaturah4").innerHTML = "Temperatura: "+temp+"&deg;C";
+				if (hum != null)
+					document.getElementById("humedadh4").innerHTML = "Humedad: "+hum+"%";
+				if (tableTemp != null)
+					document.getElementById("barraTemp").innerHTML = tableTemp;
+				if (tableHum != null)
+					document.getElementById("barraHume").innerHTML = tableHum;
+
+				//Creacion de MARCADORES debido al cambio de temperatura
+				var marcadorTemp = '';
+				var marcadorHum = '';
+					//Marcadores temperatura
+				if (temp != null){
+					if (temp < 0.0){
+						marcadorTemp += '<div style="margin-right: 16.8%; margin-left: 1px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">';
+						marcadorTemp += '</div>';
+					}
+					else if (temp >= 0.0 && temp <= 70.0){
+						marcadorTemp += '<div style="margin-right: 16.8%; margin-left: 3px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">';
+						marcadorTemp += '</div>';
+					}
+					else {
+						marcadorTemp+='<div style="margin-right: 16.8%; margin-left: 0px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">';
+						marcadorTemp+='</div>';
+					}
+					marcadorTemp += '<div style="margin-right: 16.66%; margin-left: 0px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">';
+					marcadorTemp += '</div>';
+					marcadorTemp += '<div style="margin-right: 15.9%; margin-left: 0px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">';
+					marcadorTemp += '</div>';
+					marcadorTemp += '<div style="margin-right: 16.66%; argin-left: 0px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">';
+					marcadorTemp += '</div>';
+					marcadorTemp += '<div style="margin-right: 16.66%; margin-left: 0px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">';
+					marcadorTemp += '</div>';
+					if (temp < 0.0){
+						marcadorTemp += '<div style="margin-right: 15.2%; margin-left: 0px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">';
+						marcadorTemp += '</div>';
+					}
+					else if (temp >= 0.0 && temp <= 70.0){
+						marcadorTemp += '<div style="margin-right: 14.4%; margin-left: 0px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">';
+						marcadorTemp += '</div>';
+					}
+					else{
+						marcadorTemp += '<div style="margin-right: 15.9%; margin-left: 0px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">';
+						marcadorTemp += '</div>';
+					}
+					marcadorTemp += '<div style="margin-left: 0px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">';
+					marcadorTemp += '</div>';
+				}
+				
+					//Marcadores de humedad
+				if (hum!=null){
+					if (hum > 90){
+						marcadorHum += '<div style="margin-right: 24.8%; margin-left: 0px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">';
+						marcadorHum += '</div>';
+					}
+							    
+					else if (hum < 10){
+						marcadorHum += '<div style="margin-right: 24.8%; margin-left: 2px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">';
+						marcadorHum += '</div>';
+					}
+					else{
+						marcadorHum += '<div style="margin-right: 24.8%; margin-left: 2px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">';
+						marcadorHum += '</div>';
+					}
+
+					marcadorHum += '<div style="margin-right: 24.8%; margin-left: 0px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">';
+					marcadorHum += '</div>';
+					marcadorHum += '<div style="margin-right: 24.8%; margin-left: 0px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">';
+					marcadorHum += '</div>';
+					if (hum > 90){
+						marcadorHum += '<div style="margin-right: 24.8%; margin-left: 0px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">';
+						marcadorHum += '</div>';
+					}	
+					else if (hum < 10){
+						marcadorHum += '<div style="margin-right: 23.6%; margin-left: 0px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">';
+						marcadorHum += '</div>';
+					}
+					else{
+						marcadorHum += '<div style="margin-right: 23.8%; margin-left: 0px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">';
+						marcadorHum += '</div>';
+					}
+
+					marcadorHum += '<div style="margin-left: 0px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">';
+					marcadorHum += '</div>';
+
+				}
+
+				//Reescritura de marcadores
+				if(temp != null)
+					document.getElementById("marcadoresTemp").innerHTML = marcadorTemp;
+
+				if(hum != null)
+					document.getElementById("marcadoresHum").innerHTML = marcadorHum;
+				
+				socket.emit('lectura', window.location.pathname);
+				
+			});
+
+			function cierreSocket(){
+				socket.emit('desconectar', '');
+			}
+		</script>
+
 		<div class="title">
 			<div class="titleSec">
 				<span class="imageTitle">
-					<a href="/"><img id="logo" src="/../img/raspberry-pi-logo.png"></a>
+					<a href="/" onclick="cierreSocket()"><img id="logo" src="/../img/raspberry-pi-logo.png"></a>
 				</span>
 				<span class="spanVacio"></span>
 				<span class="textTitle">
@@ -25,10 +142,12 @@
 		<div class="container">
 			<div class="main">
 				<div><h2>Lecturas del sensor</h2></div>
+				<span><p><a href="/logout">Desconectar</a></p></span>
 				<br/>
+
 				<div>
 					{% if temp %}
-						<h4>Temperatura: {{temp}}&deg;C</h4>
+						<h4 id="temperaturah4">Temperatura: {{temp}}&deg;C</h4>
 						<div style="display: flex; width:100%;">
 						    <div style="margin-left: -10px; margin-right: 12%">
 						       	-40&deg;C
@@ -52,7 +171,7 @@
 						    	80&deg;C
 						    </div>
 						</div>
-						<div style="display:flex; width:100%;">
+						<div id="marcadoresTemp" style="display:flex; width:100%;">
 							{% if temp < 0.0 %}
 								<div style="margin-right: 16.8%; margin-left: 1px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">
 						    	</div>
@@ -85,7 +204,7 @@
 						    <div style="margin-left: 0px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">
 						    </div>
 						</div>
-						<div class="barra">
+						<div id="barraTemp" class="barra">
 							{% if tableTemp %}
 								{{tableTemp | safe}}
 							{% endif %}
@@ -94,7 +213,7 @@
 					
 
 					{% if hum %}
-						<h4>Humedad: {{hum}}%</h4>
+						<h4 id="humedadh4">Humedad: {{hum}}%</h4>
 						<div style="display: flex; width:100%;">
 						    <div style="margin-left: -2px; margin-right: 21.3%">
 						       	0%
@@ -112,7 +231,7 @@
 						    	100%
 						    </div>
 						</div>
-						<div style="display:flex; width:100%;">
+						<div id="marcadoresHum" style="display:flex; width:100%;">
 						     {% if hum > 90 %}
 							    <div style="margin-right: 24.8%; margin-left: 0px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">
 							    </div>
@@ -138,10 +257,10 @@
 								<div style="margin-right: 23.8%; margin-left: 0px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">
 							    </div>
 							{% endif %}
-							<div style="margin-left: 0px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">
+								<div style="margin-left: 0px; height: 0.5em; width: 0px; border-style: solid; border-width: 1px;">
 							    </div>
 						</div>
-						<div class="barra">
+						<div id="barraHume" class="barra">
 							{% if tableHum %}
 								{{tableHum | safe}}
 							{% endif %}
@@ -149,7 +268,7 @@
 					{% endif %}
 					
 				</div>	
-				<p>Volver al <a href="/menu">menu</a></p>
+				<p>Volver al <a onclick="cierreSocket()" href="/menu">menu</a></p>
 				<br/>
 			</div>
 		</div>

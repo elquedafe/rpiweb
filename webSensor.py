@@ -90,6 +90,13 @@ def barraHum(h):
 #END INTERNAL METHODS
 
 #ROUTES
+@app.route('/logout')
+def logout():
+	global usersLogged
+	if request.remote_addr in usersLogged:
+		usersLogged.pop(request.remote_addr)
+	return redirect('/')
+
 @app.route('/', methods = ['POST', 'GET'])
 def index():
 	global usersLogged
