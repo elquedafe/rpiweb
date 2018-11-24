@@ -93,8 +93,15 @@ def barraHum(h):
 @app.route('/logout')
 def logout():
 	global usersLogged
-	if request.remote_addr in usersLogged:
-		usersLogged.pop(request.remote_addr)
+	try:
+		user = usersLogged[request.remote_addr]
+		ip = request.remote_addr
+		if ip in usersLogged:
+			uH = userHandler.USERHANDLER()
+			uH.logout(user)
+			usersLogged.pop(ip)
+	except Exception as e:
+		pass
 	return redirect('/')
 
 @app.route('/', methods = ['POST', 'GET'])

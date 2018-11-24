@@ -39,3 +39,7 @@ class USERHANDLER:
 	def _addIp(self, user, ip):
 		self._cursor.execute("""UPDATE User SET ClientHostname=%s, Attached=%s WHERE Username=%s""", (ip, '1', user))
 		self._mariadb_connection.commit()
+
+	def logout(self, user):
+		self._cursor.execute("""UPDATE User SET ClientHostname=%s, Attached=%s WHERE Username=%s""", (None, '0', user))
+		self._mariadb_connection.commit()
