@@ -162,6 +162,15 @@ p{
     transform: scale(1.1);
     background: #60772F;
 }
+span>input{
+    background-color: #e7f9e1;
+}
+
+.btn:hover span>input{
+    background: #60772F;
+
+    color: #123D0F;
+}
 
 .dot {
     content: '';
@@ -210,6 +219,9 @@ p{
     color: #123D0E;
 }
 
+.textInput{
+    border: solid #015C48 1px;
+}
 @keyframes atom {
     0% {transform: translateX(0) rotate(0);}
     30%{transform: translateX(var(--tr-X)) rotate(0);}

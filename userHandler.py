@@ -10,12 +10,14 @@ class USERHANDLER:
 			print(str(e))
 			print('No se ha podido conectar a la BBDD')
 
-	def getAccess(self, user, passwd):
+	def getAccess(self, user, passwd, ip):
 		result = False
 		query = "SELECT Username, Password FROM User WHERE Username='"+user+"'"
 		self._cursor.execute(query)
 		for userDatabase, passwdDatabase in self._cursor:
 			result = self._checkPassword(passwdDatabase, passwd)
+			if(result == True):
+				self._addIp(user, ip)
 		return result
 
 	def changePassword(self, username, newPassword):
@@ -33,3 +35,7 @@ class USERHANDLER:
 
 	def _checkPassword(self, dbPass, userPass):
 		return dbPass == hashlib.sha256(userPass.encode()).hexdigest()
+	
+	def _addIp(self, user, ip):
+		self._cursor.execute("""UPDATE User SET ClientHostname=%s, Attached=%s WHERE Username=%s""", (ip, '1', user))
+		self._mariadb_connection.commit()

@@ -92,45 +92,52 @@ def barraHum(h):
 #ROUTES
 @app.route('/', methods = ['POST', 'GET'])
 def index():
-	global accesGranted
-	print(accesGranted)
+	global usersLogged
+	accessGranted= False
+	if(request.remote_addr in usersLogged):
+		accessGranted = True
+	print(accessGranted)
 	if request.method == 'POST':
 		print('***POST***')
 		user = request.form.get('user')
 		passwd = request.form.get('passwd')
+		ip = request.remote_addr
 		uH = userHandler.USERHANDLER()
-		accesGranted=uH.getAccess(user, passwd)
-		print(accesGranted)
-		if (accesGranted):
+		accessGranted = uH.getAccess(user, passwd, ip)
+		print(accessGranted)
+		print(ip)
+		if (accessGranted):
+			usersLogged[ip] = user
+			print(usersLogged)
 			templateData = {
 			'warningAccess' : False,
-			'accesGranted' : accesGranted
+			'accesGranted' : accessGranted
 			}
 			return render_template('index.html', **templateData)
 		else:
 			templateData = {
 			'warningAccess' : True,
-			'accesGranted' : accesGranted
+			'accesGranted' : accessGranted
 			}
 			return render_template('index.html', **templateData)
 	templateData = {
 			'warningAccess' : False,
-			'accesGranted' : accesGranted
+			'accesGranted' : accessGranted
 	}
 	return render_template('index.html', **templateData)
 
 @app.route('/menu')
 def menu():
-	global accesGranted
-	if accesGranted:
+	global usersLogged
+	if request.remote_addr in usersLogged:
 		return render_template('menu.html')
 	else:
 		return redirect('/')
 @app.route('/temp/<opcion>')
 def tempHum(opcion):
 	global p
-	global accesGranted
-	if accesGranted:
+	global usersLogged
+	if request.remote_addr in usersLogged:
 		p = proxy.PROXY()
 		h = None
 		t = None
@@ -166,16 +173,16 @@ def raspImg(opcion):
 
 @app.route('/menu/calefaccion')
 def calefaccion():
-	global accesGranted
-	if accesGranted:
+	global usersLogged
+	if request.remote_addr in usersLogged:
 		return render_template('menuCalefaccion.html')
 	else:
 		return redirect('/')
 
 @app.route('/menu/calefaccion/on')
 def calefaccionOn():
-	global accesGranted
-	if accesGranted:
+	global usersLogged
+	if request.remote_addr in usersLogged:
 		try:
 			s = socket.socket()
 			s.connect(('127.0.0.1', 65000))
@@ -189,8 +196,8 @@ def calefaccionOn():
 	
 @app.route('/menu/calefaccion/off')
 def calefaccionOff():
-	global accesGranted
-	if accesGranted:
+	global usersLogged
+	if request.remote_addr in usersLogged:
 		try:
 			s = socket.socket()
 			s.connect(('127.0.0.1', 65000))
@@ -204,8 +211,8 @@ def calefaccionOff():
 
 @app.route('/menu/calefaccion/valores', methods=['GET', 'POST'])
 def valores():
-	global accesGranted
-	if accesGranted:
+	global usersLogged
+	if request.remote_addr in usersLogged:
 		fHandler = fileHandler.FILEHANDLER()
 		minTemp = None
 		maxTemp = None
@@ -302,8 +309,8 @@ def valores():
 
 @app.route('/menu/calefaccion/modoM')
 def calefaccionModoManual():
-	global accesGranted
-	if accesGranted:
+	global usersLogged
+	if request.remote_addr in usersLogged:
 		try:
 			fHandler = fileHandler.FILEHANDLER()
 			fHandler.writeParam('Modo','manual')
@@ -320,8 +327,8 @@ def calefaccionModoManual():
 
 @app.route('/menu/calefaccion/modoA')
 def calefaccionModoAutomatico():
-	global accesGranted
-	if accesGranted:
+	global usersLogged
+	if request.remote_addr in usersLogged:
 		try:
 			fHandler = fileHandler.FILEHANDLER()
 			fHandler.writeParam('Modo','automatico')
@@ -339,8 +346,8 @@ def calefaccionModoAutomatico():
 #TEMP HUM STATISTICS
 @app.route('/menu/calefaccion/est')
 def estadisticas():
-	global accesGranted
-	if accesGranted:
+	global usersLogged
+	if request.remote_addr in usersLogged:
 		
 		fHandler = fileHandler.FILEHANDLER()
 		numeroItemsPlot = int(fHandler.readParam('numberxaxis'))
@@ -355,8 +362,8 @@ def estadisticas():
 
 @app.route('/menu/calefaccion/fin')
 def finPrograma():
-	global accesGranted
-	if accesGranted:
+	global usersLogged
+	if request.remote_addr in usersLogged:
 		try:
 			
 			s = socket.socket()
@@ -371,8 +378,8 @@ def finPrograma():
 #LOG
 @app.route('/menu/calefaccion/log')
 def log():
-	global accesGranted
-	if accesGranted:
+	global usersLogged
+	if request.remote_addr in usersLogged:
 		logger = '';
 		with open('eventos.txt', 'r') as f:
 			try:
@@ -395,8 +402,8 @@ def handlerCloseing(arg):
 @socketio.on('lectura')
 def handleReader(lectura):
 	global p
-	global accesGranted
-	if accesGranted:
+	global usersLogged
+	if request.remote_addr in usersLogged:
 		h = None
 		t = None
 		tableTemp = None
@@ -428,6 +435,6 @@ def handleReader(lectura):
 #END REAL-TIME READING
 
 p = None #Proxy as global variable
-accesGranted = True
+usersLogged = {} #dictionary with users currently logged
 if __name__ == '__main__':
 	socketio.run(app, host='0.0.0.0', debug=True)

@@ -142,6 +142,17 @@ div > div > div > p {
     background: #A3ADA2;
 }
 
+span>input{
+    background-color: #242627;
+    color: #E7C5CC;
+}
+
+.btn:hover span>input{
+    background: #A3ADA2;
+
+    color: #FFE8CE;
+}
+
 .dot {
     content: '';
     position: absolute;
