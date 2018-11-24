@@ -341,29 +341,14 @@ def calefaccionModoAutomatico():
 def estadisticas():
 	global accesGranted
 	if accesGranted:
-		#modulo dataHandler.py
-		numeroItemsPlot = 0
-
-		dates,temps,hums = dataHandler.obtenerDatos()
-		#print(temps)
-		#print(dates)
-		#print(hums)
-		temps, hums, dates = dataHandler.agruparMinutos(temps, hums, dates)
-		print(temps)
 		
-		#numero de valores en la grafica para que se vea adecuadamente
-		if (len(temps) <= 12):
-			numeroItemsPlot = len(temps)
-		else:
-			numeroItemsPlot = 12
+		fHandler = fileHandler.FILEHANDLER()
+		numeroItemsPlot = int(fHandler.readParam('numberxaxis'))
+		interval = float(fHandler.readParam('plotintervaltime'))
 
-		if(os.path.isfile('templates/img/temperatura.png')):
-			print('elimnartemp')
-			os.remove("templates/img/temperatura.png")
-		if(os.path.isfile('templates/img/humedad.png')):
-			print('elimnarhume')
-			os.remove("templates/img/humedad.png")
-		dataHandler.stats(temps, dates, hums, numeroItemsPlot)
+		dataHandler.readDataFile('lecturas.txt', interval)
+		dataHandler.plotStatistics(numeroItemsPlot)
+
 		return render_template("estadisticas.html")
 	else:
 		return redirect('/')

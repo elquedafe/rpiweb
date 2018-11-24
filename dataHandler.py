@@ -63,6 +63,7 @@ def processRows(row):
 	global hums
 	global firstRowDate
 	global firstRead
+	global interval
 	minutes = 15
 	seconds = minutes*60
 
@@ -72,8 +73,8 @@ def processRows(row):
 	currentRowTemp = row['temperature']
 	currentRowHum = row['humidity']
 	if(firstRead == False):
-		#Si se diferencia en menos de 15 minutos de la primera lectura
-		if( (currentRowDate-firstRowDate).total_seconds() < 900.0):
+		#Si se diferencia en menos de x segundos de la primera lectura
+		if( (currentRowDate-firstRowDate).total_seconds() < interval):
 			addToArrays(currentRowDate, currentRowTemp, currentRowHum)
 		else:
 			computeAvg()
@@ -95,14 +96,20 @@ def computeLast():
 	minutes = 15
 	seconds = minutes*60
 
-	#completar
+	currentRowDate = dates[-1]
+	currentRowTemp = temps[-1]
+	currentRowHum = hums[-1]
+
+	computeAvg()
+	emptyArrays()
 
 
-def readDataFile():
-	df = pd.read_csv('lecturas.txt', sep="\t", header=None, names = ['date','temperature','humidity'])
-	#printDataFrame(df)
-	#df = df.set_index('date')
-	#printDataFrame(df)
+
+
+def readDataFile(file, intervaltime):
+	global interval
+	interval = intervaltime
+	df = pd.read_csv(file, sep="\t", header=None, names = ['date','temperature','humidity'])
 	df.apply(processRows, axis=1)
 	computeLast()
 
@@ -110,25 +117,37 @@ def plotStatistics(numeroItemsPlot):
 	global outDates
 	global outTemps
 	global outHums
-	print(outTemps)
 	x = []
 	
 	for i in range(0, len(outDates)):
 		x.append(i)
-	
 	#plot temp
+	print(outTemps)
+	print(outDates)
+	print(outHums)
 	plt.ylim([-40, 80])
-	plt.plot(x[-numeroItemsPlot:], outTemps[-numeroItemsPlot:], '--o')
+	plt.grid(True)
+	plt.title('House Temperature')
+	plt.xlabel('Time')
+	plt.ylabel('Temperature (ºC)')
+	plt.plot(x[-numeroItemsPlot:], outTemps[-numeroItemsPlot:], '-or')
 	plt.gcf().autofmt_xdate()
 	plt.xticks(x[-numeroItemsPlot:], outDates[-numeroItemsPlot:])
+	plt.tight_layout()
 	#plt.show()
 	plt.savefig('templates/img/temperatura.png')
 	plt.close()
+	
 	#plot humedad
 	plt.ylim([0, 100])
-	plt.plot(x[-numeroItemsPlot:], outHums[-numeroItemsPlot:], '--o')
+	plt.grid(True)
+	plt.title('House Humidity')
+	plt.xlabel('Time')
+	plt.ylabel('RH (%)')
+	plt.plot(x[-numeroItemsPlot:], outHums[-numeroItemsPlot:], '-ob')
 	plt.gcf().autofmt_xdate()
 	plt.xticks(x[-numeroItemsPlot:], outDates[-numeroItemsPlot:])
+	plt.tight_layout()
 	#plt.show()
 	plt.savefig('templates/img/humedad.png')
 	plt.close()
@@ -142,17 +161,5 @@ outTemps = []
 outHums = []
 firstRowDate = 0
 firstRead = True
-
-def main():
-	numeroItemsPlot = 15
-	if(os.path.isfile('templates/img/temperatura.png')):
-		print('elimnartemp')
-		os.remove("templates/img/temperatura.png")	
-	if(os.path.isfile('templates/img/humedad.png')):
-		print('elimnarhume')
-		os.remove("templates/img/humedad.png")
-	readDataFile()
-	plotStatistics(numeroItemsPlot)
-
-if __name__ == "__main__":
-	main()
+interval = 0
+userslogged = {}
