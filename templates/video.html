@@ -1,0 +1,85 @@
+<html>
+	<head>
+		<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+		<meta http-equiv="Pragma" content="no-cache" />
+		<meta http-equiv="Expires" content="0" />
+		<script>
+			function cambioEstilo(urlEstilo){
+				var stylesheet = document.getElementById("stylesheet");
+       			stylesheet.setAttribute('href', urlEstilo);
+			}
+		</script>
+
+		<link id="stylesheet" rel="stylesheet" href='../static/style.css' />
+	</head>
+	<body>
+		<!-- socketio -->
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.js" charset="utf-8">
+		</script>
+		<script>
+			const socket = io();
+			//socket.emit('solicita', '1');
+			
+			socket.on('video', function(index) {
+				var i = index['lectura'];
+				//await sleep(1);
+				/*if (info.image) {
+					var img = new Image();
+				    img.src = 'data:image/jpeg;base64,' + info.buffer;
+				    ctx.drawImage(img, 0, 0);
+				}*/
+				if(i == '1'){
+					document.getElementById("imagen").src = "/../img/img1.jpg?t=" + new Date().getTime();
+					i = '2';
+				}
+				else if(i == '2'){
+					document.getElementById("imagen").src = "/../img/img2.jpg?t=" + new Date().getTime();
+					i = '1';
+				}
+				socket.emit('solicita', i);
+			});
+		</script>
+		<div class="title">
+			<div class="titleSec">
+				<span class="imageTitle">
+					<a href="/" onclick="cierreSocket()"><img id="logo" src="/../img/raspberry-pi-logo.png"></a>
+				</span>
+				<span class="spanVacio"></span>
+				<span class="textTitle">
+					<i>Diseño de Aplicaciones para RaspberryPi</i>
+				</span>
+			</div>
+		</div>
+
+		<div class="container">
+			<div class="main">
+				<div><h2>Streaming</h2></div>
+				<span><p><a href="/logout">Desconectar</a></p></span>
+				<br/>
+				<div>
+					<img style="display: block; margin-left: auto; margin-right: auto; width: 50%;" src="{{ url_for('video_feed') }}">
+				</div>
+				<p>Volver al <a onclick="cierreSocket()" href="/menu">menu</a></p>
+				<br/>
+			</div>
+		</div>
+		<div class="bottom">
+			<div style="display: flex; font-size: 16px;">
+				<div style="margin-left: 42%; margin-right: 5%">
+					<a onclick="cambioEstilo('../static/style.css')" href="#">Estilo 1</a>
+				</div>
+				<div style="margin-left: 0px;">
+					<a onclick="cambioEstilo('../static/styleDark.css')" href="#">Estilo 2</a>
+				</div>
+			</div>
+			<span calss="upm">
+				<img id="logoUPM" src="/../img/logoUPM.png"/>
+			</span>
+			<span class="etsist">
+				<img id="logoETSIST" src="/../img/logoETSIST.gif"/>
+			</span>
+		</div>
+			
+	</body>
+
+</html>

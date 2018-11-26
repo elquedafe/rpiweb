@@ -1,6 +1,6 @@
 #System imports
 import sys
-from flask import Flask, render_template, send_file, redirect, request
+from flask import Flask, render_template, send_file, redirect, request, Response
 import socket
 import time
 import os
@@ -11,6 +11,7 @@ import userHandler
 import dataHandler
 import fileHandler
 import threading
+from cameraHandlerTest import Camera
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret'
@@ -453,6 +454,23 @@ def log():
 		return render_template("log.html", logger=logger)
 	else:
 		return redirect('/')
+
+	# CAMARA
+@app.route('/menu/video')
+def video():
+    return render_template('video.html')
+
+def gen(camera):
+    while True:
+        frame = camera.get_frame()
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+
+@app.route('/video_feed')
+def video_feed():
+    return Response(gen(Camera()), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+    #END CAMARA
 #END OF ROUTES
 
 #REAL-TIME READING
@@ -490,12 +508,42 @@ def handleReader(lectura):
 
 		#Espera para leer cada 1 segundo
 		time.sleep(0.5)
-		socketio.emit('lect',  templateData)
+		socketio.emit('lect', templateData)
 	else:
 		return redirect('/')
 #END REAL-TIME READING
 
+#Video
+"""@app.route('/menu/video')
+def video():
+	global usersLogged
+	global vH
+	if request.remote_addr in usersLogged:
+		return render_template("video.html")
+	else:
+		return redirect('/')
+
+@socketio.on('solicita')
+def handlerVideo(lectura):
+	global usersLogged
+	if request.remote_addr in usersLogged:
+		print('Index:'+lectura)
+		if (lectura=='1'):
+			cameraHandler.capture('templates/img/img1.jpg')
+		elif(lectura=='2'):
+			cameraHandler.capture('templates/img/img2.jpg')
+		
+		data = { 
+			'lectura': lectura
+		}
+		socketio.emit('video',  data)
+	else:
+		return redirect('/')"""
+
+
+
 p = None #Proxy as global variable
+#vH = cameraHandler.CAMERAHANDLER() #video handler
 usersLogged = {} #dictionary with users currently logged
 timers = {}
 if __name__ == '__main__':
