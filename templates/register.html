@@ -24,16 +24,11 @@
 		<div class="container">
 			<div class="main">
 				<div>
-					<h2>Bienvenido a la aplicacion de temperatura y humedad para Raspberry</h2>
+					<h2>Registro</h2>
 				</div>
 				<span><p><a href="/logout">Desconectar</a></p></span>
-				<div>
-					<h3>Descripción</h3>
-					<p>Esta aplicación proporcina información sobre la temperatura y la humedad recogidas por el sensor am2320 conectado a la RaspberryPi 3 Model B</p>
-				</div>
 				</br>
 				<div>
-					{% if accesGranted == False %}
 						<form name="valores" action="" method="post">
 							<fieldset>
 								<div>
@@ -44,31 +39,25 @@
 									<label for="passwd">Password</label>
 									<input class="textInput" type="password" name="passwd">
 								</div>
-								{% if warningAccess == True %}
-									<p style="color:red; font-size:10px;">Usuario o contraseña no válida</p>
-								{% endif %}
-
-								<span><p><a href="/registro">REGISTRO</a></p></span>
+								<div>
+									<label for="description">Description</label>
+									<input class="textInput" type="text" name="description">
+								</div>
 								<div class="btn">
-									<span><input class="botonEnlace" type="submit" value="Verificar"></span></a>
+									<span><input class="botonEnlace" type="submit" value="Registrar"></span></a>
 									<div class="dot"></div>
 								</div>
+								{% if accessGranted == True %}
+									<div class="btn">
+										<a href="menu" class="botonEnlace"><span>Entrar</span></a>
+										<div class="dot"></div>
+									</div>	
+								{% endif %}
 								</br>
-
 							</fieldset>
-						</form> 
-					{% endif %}
-					{% if accesGranted == True %}
-						<span><p><a href="/registro">REGISTRO</a></p></span>
-						<div class="btn">
-							<a href="menu" class="botonEnlace"><span>Entrar</span></a>
-							<div class="dot"></div>
-						</div>	
-					{% endif %}
+						</form>
 				</div>
-				</br>
-				
-				<br/>	
+				<div><p>Volver al <a href="/">index</a></p></div>	
 			</div>
 		</div>
 		<div class="bottom">

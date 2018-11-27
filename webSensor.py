@@ -123,11 +123,11 @@ def resetTimeout(ip):
 @app.route('/logout')
 def logout():
 	global usersLogged
+	uH = userHandler.USERHANDLER()
 	try:
 		user = usersLogged[request.remote_addr]
 		ip = request.remote_addr
 		if ip in usersLogged:
-			uH = userHandler.USERHANDLER()
 			uH.logout(user)
 			usersLogged.pop(ip)
 	except Exception as e:
@@ -426,6 +426,8 @@ def finPrograma():
 	global usersLogged
 	if request.remote_addr in usersLogged:
 		resetTimeout(request.remote_addr)
+		uH = userHandler.USERHANDLER()
+		uH.logoutAllUsers()
 		try:
 			
 			s = socket.socket()
@@ -454,6 +456,34 @@ def log():
 		return render_template("log.html", logger=logger)
 	else:
 		return redirect('/')
+
+#REGISTRO
+@app.route('/registro', methods = ['POST', 'GET'])
+def registro():
+	global usersLogged
+	accessGranted = False
+	if request.remote_addr in usersLogged:
+		accessGranted = True
+	else:
+		if request.method == 'POST':
+			user = request.form.get('user')
+			passwd = request.form.get('passwd')
+			description = request.form.get('description')
+			try:
+				uH = userHandler.USERHANDLER()
+				accessGranted = uH.newUser(user, passwd, description, request.remote_addr)
+				if accessGranted:
+					fH = fileHandler.FILEHANDLER()
+					timers[request.remote_addr] = threading.Timer(int(fH.readParam('usertimeout')), logoutUser, [request.remote_addr])
+					timers[request.remote_addr].start()
+					usersLogged[request.remote_addr] = user
+					return redirect('/')
+			except Exception as e:
+				print(str(e))
+			finally:
+				uH.close()
+		print(str(usersLogged))
+	return render_template("register.html", accessGranted=accessGranted)
 
 	# CAMARA
 @app.route('/menu/video')
