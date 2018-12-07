@@ -6,11 +6,33 @@ import time
 
 import fileHandler
 import notificationHandler
+import distanceHandler
 import proxy
+import userHandler
+import audioHandler
+import bulbHandler
+import webSensor
+from webSensor import nfcAddUserList
+from MFRC522python import Read
 from gpiozero import LED
-
+import signal
 import telepot
 from telepot.loop import MessageLoop
+
+
+
+def end(signal,frame):
+	print('CTRL+C catched')
+	uH = userHandler.USERHANDLER()
+	try:
+		uH.logoutAllUsers()
+	except Exception as e:
+		print(str(e))
+	finally:
+		uH.close()
+		sys.exit(0)
+
+signal.signal(signal.SIGINT, end)
 
 
 def serverThread(cond, kill):
@@ -49,7 +71,7 @@ def robotStateChange(kill, persona=None):
 	global telGroup
 	global temp
 	global mode
-
+	global killAlarm
 	print('Temperatura: '+str(temp)+' -- '+'modo: '+mode+' --- ')
 
 	wEvent = open("eventos.txt", "a") #var to write events
@@ -79,6 +101,15 @@ def robotStateChange(kill, persona=None):
 		led.off() #momentaneamente
 		noti.sendNotification('Cambio de modo desde el servidor --- temperatura actual: '+str(temp)+' Celsius '+str(datetime.datetime.now()), bot, telGroup, persona)
 		wEvent.write(format(datetime.datetime.now())+"\t"+str(temp)+"\tcambio de modo desde el servidor web\n")
+	elif collected == 'x00x06':
+		wEvent.write(format(datetime.datetime.now())+"\tAlarma activada\n")
+		noti.sendNotification('La alarma ha sido activada. Puedes ver que esta sucediendo en: http://192.168.1.102:5000/menu/video '+str(datetime.datetime.now()), bot, telGroup)
+		alarm()
+	elif collected == 'x00x07':
+		wEvent.write(format(datetime.datetime.now())+"\tAlarma desactivada\n")
+		killAlarm.set()
+		noti.sendNotification('La alarma ha sido desactivada. '+str(datetime.datetime.now()), bot, telGroup)
+
 
 	wEvent.close()
 	#reset collected data
@@ -156,9 +187,11 @@ def robotThread(cond, kill):
 	print('termina hilo robot')
 
 # Logica de comandos de Telegram
-def lecturaMensajesBot(msg, kill):
+def lecturaMensajesBot(msg):
 	global bot
 	global collected
+	global alarmSet
+	global kill
 	#telGroup = int(telGroup)
 	firstName = msg['from']['first_name']
 	idUser = msg['from']['id']
@@ -194,8 +227,77 @@ def lecturaMensajesBot(msg, kill):
 			elif (texto == '/calefaccion_auto' or texto == '/calefaccion_auto@mayordomoetsist_bot'):
 				collected = 'x00x04'
 				robotStateChange(None, persona)
+			elif (texto == '/activar_alarma' or texto == '/activar_alarma@mayordomoetsist_bot'):
+				print('activada alarma en bot')
+				collected = 'x00x06'
+				alarmSet = True
+				robotStateChange(None, persona)
+			elif (texto == '/desactivar_alarma' or texto == '/desactivar_alarma@mayordomoetsist_bot'):
+				collected = 'x00x07'
+				alarmSet = False
+				robotStateChange(None, persona)
 			else:
 				bot.sendMessage(telGroup, "Comando: "+texto+" no valido. Accionado por "+persona)
+
+def distanceThread(cond, kill):
+	global alarmSet
+	global collected
+	print('distance thread')
+	distanceHand = distanceHandler.DISTANCEHANDLER()
+	while not kill.is_set():
+		distance = distanceHand.distance()
+		print(str(distance)+'m')
+		if(distance > 0.5):
+			time.sleep(0.5)
+			alarmSet = False
+		elif(alarmSet==False):
+			uH = userHandler.USERHANDLER()
+			try:
+				nConnectedDevices = uH.countDevicesAtHome()
+			finally:
+				uH.close()
+			#If nobody is at home
+			if(nConnectedDevices == 0):
+				alarmSet = True
+				collected = 'x00x06'
+				robotStateChange(collected)
+
+def alarm():
+	global alarmSet
+	global bot
+	global noti
+	global killAlarm
+	print("alarma activada")
+	killAlarm = threading.Event()
+	audThr = threading.Thread(target=audioThread, args=(killAlarm,))
+	lightThr = threading.Thread(target=alarmLightThread, args=(killAlarm,))
+
+	audThr.start()
+	lightThr.start()
+
+def audioThread(killAlarm):
+	global alarmSet
+	while(not killAlarm.is_set()):
+		audioHandler.playRob()
+
+def alarmLightThread(killAlarm):
+	global alarmSet
+	while(not killAlarm.is_set()):
+		bulbHandler.blink(0.3)
+
+	
+def servWebThread(cond, kill):
+	global serverweb
+	serverweb = webSensor.WEBSENSOR()
+	if serverweb != None:
+		print('webserv instancado')
+	else:
+		print('webNO instancado')
+
+def nfcThread(cond, kill):
+	global serverweb
+	Read.read(webSensor)
+
 
 mode = None
 temp = None
@@ -209,21 +311,26 @@ x00x02 --> turn off led
 x00x03 --> read again temp parameters
 x00x04 --> change from manual to auto with telegram
 x00x05 --> kill the program
+x00x06 --> alarm activation
+x00x07 --> alarm deactivation
 '''
 collected = None
 led = LED(18) #GPIO
 bot = None #telegram
 noti = None #all notifications
-
+alarmSet = False
+killAlarm = None
+kill = None
+serverweb = None
 def main (args):
 	global collected
 	global cond #needed for thread sync
 	global noti
-	
+	global kill
 	try:
 		fileH = fileHandler.FILEHANDLER() #var to read from config file
 		noti = notificationHandler.NOTIFICATIONHANDLER()
-
+		
 		kill = threading.Event()
 		#initializing telegram thread
 		global telToken
@@ -233,17 +340,22 @@ def main (args):
 		global bot
 		bot = telepot.Bot(telToken)
 		#starting telegram thread
-		MessageLoop(bot, lecturaMensajesBot).run_as_thread(kill)
+		MessageLoop(bot, lecturaMensajesBot).run_as_thread()
 		
 		#initializing the rest of the threads
 		#starting the other threads
 		cond = threading.Condition()
+		servWeb = threading.Thread(target=servWebThread, args=(cond, kill))
 		serv = threading.Thread(target=serverThread, args=(cond, kill,)) #thread which communicates with web server
 		robot = threading.Thread(target=robotThread, args=(cond, kill))
+		#distance = threading.Thread(target=distanceThread, args=(cond, kill))
+		nfc = threading.Thread(target=nfcThread, args=(cond, kill))
 
+		servWeb.start()
 		serv.start()
 		robot.start()
-
+		#distance.start()
+		nfc.start()
 		#the main thread will be reading temp
 		global temp
 		sensor = proxy.PROXY() #creating sensor
@@ -254,8 +366,11 @@ def main (args):
 		sensor.close()
 		print('sale bucle en el main')
 		#finish the program
+		servWeb.join()
 		serv.join()
 		robot.join()
+		#distance.join()
+		nfc.join()
 	except Exception as e:
 		print (e)
 

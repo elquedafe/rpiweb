@@ -19,6 +19,22 @@ class USERHANDLER:
 				self._addIp(user, ip)
 		return result
 
+	def getNfcAccess(self, user):
+		ip = None
+		try:
+			self._cursor.execute("SELECT Username, MasterHomeHostname, Attached FROM User WHERE Username=%s", (user,))
+			for userDatabase, homeHostameDatabase, attachedDatabase in self._cursor:
+				ip = homeHostameDatabase
+				if(attachedDatabase == 0):
+					self._addIp(user, homeHostameDatabase)
+				if(attachedDatabase == 1):
+					self.logout(user)
+			return user, ip
+		except mariadb.Error as error:
+			print(str(error))
+			print('NFC access denied')
+			return user, None
+
 	def newUser(self, user, passwd, description, ip):
 		passwordEncrypted = self._encryptPassword(passwd)
 		try:
@@ -31,7 +47,6 @@ class USERHANDLER:
 			print("Error: {}".format(error))
 			return False
 
-
 	def changePassword(self, username, newPassword):
 		passwordEncrypted = self._encryptPassword(newPassword)
 		self._cursor.execute("""UPDATE User SET Password=%s WHERE Username=%s""", (passwordEncrypted, username))
@@ -41,6 +56,23 @@ class USERHANDLER:
 		self._cursor.execute("""UPDATE User SET ClientHostname=%s, Attached=%s""", (None, '0'))
 		self._mariadb_connection.commit()
 
+	def logout(self, user):
+		self._cursor.execute("""UPDATE User SET ClientHostname=%s, Attached=%s WHERE Username=%s""", (None, '0', user))
+		self._mariadb_connection.commit()
+
+	def countDevicesAtHome(self):
+		try:
+			count = None
+			self._cursor.execute("SELECT COUNT(*) FROM User WHERE Attached=%s", (1,))
+			count = self._cursor.fetchone()[0]
+			return count
+		except mariadb.Error as error:
+			return None
+
+	def close(self):
+		self._mariadb_connection.close()
+
+	#private functions
 	def _encryptPassword(self, password):
 		sha_signature = hashlib.sha256(password.encode()).hexdigest()
 		return sha_signature
@@ -52,9 +84,4 @@ class USERHANDLER:
 		self._cursor.execute("""UPDATE User SET ClientHostname=%s, Attached=%s WHERE Username=%s""", (ip, '1', user))
 		self._mariadb_connection.commit()
 
-	def logout(self, user):
-		self._cursor.execute("""UPDATE User SET ClientHostname=%s, Attached=%s WHERE Username=%s""", (None, '0', user))
-		self._mariadb_connection.commit()
-
-	def close(self):
-		self._mariadb_connection.close()
+	
