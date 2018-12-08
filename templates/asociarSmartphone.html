@@ -1,0 +1,100 @@
+<html>
+	<head>
+		<script>
+			function cambioEstilo(urlEstilo){
+				var stylesheet = document.getElementById("stylesheet");
+       			stylesheet.setAttribute('href', urlEstilo);
+			}
+		</script>
+
+		<link id="stylesheet" rel="stylesheet" href='../static/style.css' />
+	</head>
+	<body>
+		<!-- socketio -->
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.js" charset="utf-8">
+		</script>
+		<script>
+			const socket = io();
+			socket.emit('requestUIDtoServer', '');
+			socket.on('recibirUID', function(lectura){
+				var uid = lectura['uid'];
+				if (uid != null){
+					document.getElementById("uid").setAttribute('value', uid);
+				}
+				socket.emit('requestUIDtoServer', '');
+			});
+		</script>
+		<div class="title">
+			<div class="titleSec">
+				<span class="imageTitle">
+					<a href="/"><img id="logo" src="/../img/raspberry-pi-logo.png"></a>
+				</span>
+				<span class="spanVacio"></span>
+				<span class="textTitle">
+					<i>Diseño de Aplicaciones para RaspberryPi</i>
+				</span>
+			</div>
+		</div>
+		<div class="container">
+			<div class="main">
+				<div>
+					<h2>Asociar Smartphone</h2>
+				</div>
+				<span><p><a href="/logout">Desconectar</a></p></span>
+				</br>
+				<div>
+						<form name="valores" action="" method="post">
+							<fieldset>
+								<div>
+									<label for="uid" >UID: </label>
+									<input id="uid" class="textInput" type="text" name="uid" value="" >
+									<span style="font-size: 10px;">Acerque su smartphone al lector</span>
+								</div>
+								<div>
+									<label for="descripcion">Descripcion: </label>
+									<input class="textInput" type="text" name="descripcion">
+								</div>
+								<div>
+									<label for="hostname">Hostname o IP: </label>
+									<input class="textInput" type="text" name="hostname">
+								</div>
+								<div>
+									Donde desea autenticar: 
+									<select name="master">
+										<option value="1">Smartphone</option>
+										<option value="0">Master</option>
+									</select>
+								</div>
+								{% if mensaje%}
+									<p style="color:red; font-size:10px;">{{ mensaje }}</p>
+								{% endif %}
+								<div class="btn">
+									<span><input class="botonEnlace" type="submit" value="Asociar"></span></a>
+									<div class="dot"></div>
+								</div>
+								</br>
+							</fieldset>
+						</form>
+				</div>
+				<div><p>Volver al <a href="/">index</a></p></div>	
+			</div>
+		</div>
+		<div class="bottom">
+			<div style="display: flex; font-size: 16px;">
+				<div style="margin-left: 42%; margin-right: 5%">
+					<a onclick="cambioEstilo('../static/style.css')" href="#">Estilo 1</a>
+				</div>
+				<div style="margin-left: 0px;">
+					<a onclick="cambioEstilo('../static/styleDark.css')" href="#">Estilo 2</a>
+				</div>
+			</div>
+			<span calss="upm">
+				<img id="logoUPM" src="/../img/logoUPM.png"/>
+			</span>
+			<span class="etsist">
+				<img id="logoETSIST" src="/../img/logoETSIST.gif"/>
+			</span>
+		</div>
+	</body>
+
+</html>

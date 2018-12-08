@@ -28,12 +28,13 @@
 				</div>
 				<span><p><a href="/logout">Desconectar</a></p></span>
 				<div>
-					<h3>Descripción</h3>
-					<p>Esta aplicación proporcina información sobre la temperatura y la humedad recogidas por el sensor am2320 conectado a la RaspberryPi 3 Model B</p>
+					<h3>Descripción</h3>	
 				</div>
+				{% if accesGranted == False %}
+				<p>Esta aplicación proporcina información sobre la temperatura y la humedad recogidas por el sensor am2320 conectado a la RaspberryPi 3 Model B</p>
 				</br>
 				<div>
-					{% if accesGranted == False %}
+					
 						<form name="valores" action="" method="post">
 							<fieldset>
 								<div>
@@ -60,6 +61,7 @@
 					{% endif %}
 					{% if accesGranted == True %}
 						<span><p><a href="/registro">REGISTRO</a></p></span>
+						<p>Bienvenido <strong>{{ user }}</strong></p>
 						<div class="btn">
 							<a href="menu" class="botonEnlace"><span>Entrar</span></a>
 							<div class="dot"></div>

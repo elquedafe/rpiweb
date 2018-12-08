@@ -4,7 +4,7 @@ from flask import Flask, render_template, send_file, redirect, request, Response
 import socket
 import time
 import os
-from flask_socketio import SocketIO, send, disconnect
+from flask_socketio import SocketIO, send, disconnect, emit
 #User imports
 import proxy
 import userHandler
@@ -12,6 +12,7 @@ import dataHandler
 import fileHandler
 import threading
 from cameraHandlerTest import Camera
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret'
 socketio = SocketIO(app)
@@ -19,7 +20,7 @@ p = None #Proxy as global variable
 #vH = cameraHandler.CAMERAHANDLER() #video handler
 usersLogged = {} #dictionary with users currently logged
 timers = {}
-
+uid = None
 
 #callback function for timeout
 def logoutUser(*args):
@@ -118,6 +119,7 @@ def barraHum(h):
 	if (h>90):
 		tableHum += '<div style="font-size:14px; margin-left:'+str(h)+'%"><i>'+str(h)+'%</i></div>'
 	return tableHum
+
 def nfcAddUserList(user, ip):
 		print('addinf nfc user')
 		global usersLogged
@@ -128,16 +130,21 @@ def nfcAddUserList(user, ip):
 			print(usersLogged)
 			timers[ip] = threading.Timer(int(fH.readParam('usertimeout')), logoutUser, [ip])
 			timers[ip].start()
-class WEBSENSOR:	
 
-	
-			
+def envioNFC_UID(uidFromReader):
+	global uid
+	uid = uidFromReader
+	print('WebServer: obtenido uid del movil'+uid)
+
+class WEBSENSOR:			
 	def nfcLogoutUserList():
 		global usersLogged
 		global timers
 		usersLogged.pop(ip)
 		print(ip+' session closed')
+	
 	def __init__(self):
+		print('init')
 		socketio.run(app, host='0.0.0.0')
 
 	#INTERNAL METHODS
@@ -153,7 +160,6 @@ class WEBSENSOR:
 		timers[ip] = threading.Timer(int(fH.readParam('usertimeout')), logoutUser, [ip]) #crear nuevo timeout
 		timers[ip].start() #iniciar timeout
 
-	
 
 	#END INTERNAL METHODS
 
@@ -200,7 +206,8 @@ class WEBSENSOR:
 				usersLogged[ip] = user
 				templateData = {
 				'warningAccess' : False,
-				'accesGranted' : accessGranted
+				'accesGranted' : accessGranted,
+				'user' : user
 				}
 				return render_template('index.html', **templateData)
 			else:
@@ -523,6 +530,45 @@ class WEBSENSOR:
 			print(str(usersLogged))
 		return render_template("register.html", accessGranted=accessGranted)
 
+	#Asociar smartphone
+	@app.route('/menu/asociarSmartphone', methods = ['POST', 'GET'])
+	def asociarSmartphone():
+		global usersLogged
+		accessGranted = False
+		mensaje = None
+		if request.remote_addr in usersLogged:
+			resetTimeout(request.remote_addr)
+			if request.method == 'POST':
+				uid = request.form.get('uid')
+				description = request.form.get('descripcion')
+				hostname = request.form.get('hostname')
+				authSmart = request.form.get('master')
+				print(str(usersLogged[request.remote_addr])+' '+str(uid)+' '+str(hostname)+' '+str(description)+' '+str(authSmart))
+				try:
+					uH = userHandler.USERHANDLER()
+					added = uH.addSmartphone(uid, description, hostname, authSmart)
+					related = uH.relateSmartphone(usersLogged[request.remote_addr], uid)
+					if(not added):
+						mensaje = "El smartphone no se ha podido añadir a la base de datos o ya estaba incluido"
+					if(not related):
+						mensaje = "El smartphone no se puede asociar al usuario, puede que ya este asociado a otro usuario."
+					else:
+						mensaje = "Smarphone asociado correctamente"
+					"""if accessGranted:
+						fH = fileHandler.FILEHANDLER()
+						timers[request.remote_addr] = threading.Timer(int(fH.readParam('usertimeout')), logoutUser, [request.remote_addr])
+						timers[request.remote_addr].start()
+						usersLogged[request.remote_addr] = user
+						return redirect('/')"""
+				except Exception as e:
+					print(str(e))
+				finally:
+					uH.close()
+		else:
+			return redirect('/')
+			print(str(usersLogged))
+		return render_template("asociarSmartphone.html", mensaje=mensaje)
+
 		# CAMARA
 	@app.route('/menu/video')
 	def video():
@@ -579,6 +625,24 @@ class WEBSENSOR:
 			socketio.emit('lect', templateData)
 		else:
 			return redirect('/')
+
+	@socketio.on('requestUIDtoServer')
+	def envio(lectura):
+		global uid
+		templateData = {}
+		if(uid != None):
+			print('UID listo para enviar'+uid)
+			auxuid = uid
+			uid = None
+			try:
+				templateData = { 'uid' : auxuid, 'hola' : True }
+				time.sleep(0.5)
+				
+			except Exception as e:
+				print('error de emit al html')
+				print(str(e))
+		socketio.emit('recibirUID', templateData)
+
 	#END REAL-TIME READING
 
 	

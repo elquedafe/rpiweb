@@ -12,6 +12,7 @@ import userHandler
 import audioHandler
 import bulbHandler
 import webSensor
+import micHandlerTest
 from webSensor import nfcAddUserList
 from MFRC522python import Read
 from gpiozero import LED
@@ -298,6 +299,9 @@ def nfcThread(cond, kill):
 	global serverweb
 	Read.read(webSensor)
 
+def voiceThread(cond, kill):
+	global sensor
+	micHandlerTest.recognizer(sensor)
 
 mode = None
 temp = None
@@ -322,15 +326,21 @@ alarmSet = False
 killAlarm = None
 kill = None
 serverweb = None
+sensor = None
 def main (args):
 	global collected
 	global cond #needed for thread sync
 	global noti
 	global kill
+	global sensor
 	try:
 		fileH = fileHandler.FILEHANDLER() #var to read from config file
 		noti = notificationHandler.NOTIFICATIONHANDLER()
 		
+		#the main thread will be reading temp
+		global temp
+		sensor = proxy.PROXY() #creating sensor
+
 		kill = threading.Event()
 		#initializing telegram thread
 		global telToken
@@ -350,15 +360,15 @@ def main (args):
 		robot = threading.Thread(target=robotThread, args=(cond, kill))
 		#distance = threading.Thread(target=distanceThread, args=(cond, kill))
 		nfc = threading.Thread(target=nfcThread, args=(cond, kill))
+		voice = threading.Thread(target=voiceThread, args=(cond, kill))
+
 
 		servWeb.start()
 		serv.start()
 		robot.start()
 		#distance.start()
 		nfc.start()
-		#the main thread will be reading temp
-		global temp
-		sensor = proxy.PROXY() #creating sensor
+		voice.start()
 
 		while (not kill.is_set()):
 			temp = sensor.leerTem()
@@ -371,6 +381,7 @@ def main (args):
 		robot.join()
 		#distance.join()
 		nfc.join()
+		voice.join()
 	except Exception as e:
 		print (e)
 
