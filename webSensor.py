@@ -547,19 +547,9 @@ class WEBSENSOR:
 				try:
 					uH = userHandler.USERHANDLER()
 					added = uH.addSmartphone(uid, description, hostname, authSmart)
-					related = uH.relateSmartphone(usersLogged[request.remote_addr], uid)
-					if(not added):
-						mensaje = "El smartphone no se ha podido añadir a la base de datos o ya estaba incluido"
-					if(not related):
-						mensaje = "El smartphone no se puede asociar al usuario, puede que ya este asociado a otro usuario."
-					else:
-						mensaje = "Smarphone asociado correctamente"
-					"""if accessGranted:
-						fH = fileHandler.FILEHANDLER()
-						timers[request.remote_addr] = threading.Timer(int(fH.readParam('usertimeout')), logoutUser, [request.remote_addr])
-						timers[request.remote_addr].start()
-						usersLogged[request.remote_addr] = user
-						return redirect('/')"""
+					if(added == False):
+						uH.updateSmartphone(uid, description, hostname, authSmart)
+					mensaje,related = uH.relateSmartphone(usersLogged[request.remote_addr], uid)
 				except Exception as e:
 					print(str(e))
 				finally:

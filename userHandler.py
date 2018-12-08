@@ -64,7 +64,7 @@ class USERHANDLER:
 			print(str(error))
 			print('NFC access denied')
 			return user, None
-#modificar
+
 	def addSmartphoneAndRelate(self, user, uid, smartphoneDescription, smartphoneHostname, useSmartphoneIP):
 		returned1 = self.addSmartphone(uid, smartphoneDescription, smartphoneHostname, useSmartphoneIP)
 		returned2 = self.relateSmartphone(user, uid)
@@ -73,24 +73,39 @@ class USERHANDLER:
 	def relateSmartphone(self, username, uid):
 		idUser = None
 		idSmartphone = None
-		self._cursor.execute("SELECT IdUser From User WHERE Username=%s", (username,))
-		idUser = self._cursor.fetchone()[0]
-		self._cursor.execute("SELECT IdSmartphone From Smartphone WHERE UID=%s", (uid,))
-		idSmartphone = self._cursor.fetchone()[0]
 		try:
-			print(str(idUser) +' '+ str(idSmartphone))
-			self._cursor.execute("INSERT INTO User2Smartphone (IdUser, IdSmartphone) VALUES (%s,%s)", (idUser, idSmartphone))
-			self._mariadb_connection.commit()
-			return True
+			self._cursor.execute("SELECT IdUser From User WHERE Username=%s", (username,))
+			idUser = self._cursor.fetchone()[0]
+			self._cursor.execute("SELECT IdSmartphone From Smartphone WHERE UID=%s", (uid,))
+			idSmartphone = self._cursor.fetchone()[0]
+			self._cursor.execute("SELECT COUNT(*) From User2Smartphone WHERE IdSmartphone=%s", (idSmartphone,))
+			nAssociations = self._cursor.fetchone()[0]
+			print(str(idUser) +' '+ str(idSmartphone)+' '+str(nAssociations))
+			if(str(nAssociations)=='0'):
+				self._cursor.execute("INSERT INTO User2Smartphone (IdUser, IdSmartphone) VALUES (%s,%s)", (idUser, idSmartphone))
+				self._mariadb_connection.commit()
+				return "Telefono asociado con exito",True
+			else:
+				print('Error Telfono ya asociado')
+				return "El telefono ya esta asociado a un usuario",False
 		except mariadb.Error as error:
 			print("Error: {}".format(error))
 			print("Error al enlazar telefono")
 			traceback.print_exc(file=sys.stdout)
-			return False
+			return "Error al asociar",False
 
 	def addSmartphone(self, uid, smartphoneDescription, smartphoneHostname, useSmartphoneIP):
 		try:
 			self._cursor.execute("INSERT INTO Smartphone (UID,SmartphoneDescription,SmartphoneHostname,UseSmartphoneIP) VALUES (%s,%s,%s,%s)", (uid,smartphoneDescription, smartphoneHostname, useSmartphoneIP))
+			self._mariadb_connection.commit()
+			return True
+		except mariadb.Error as error:
+			print("Error: {}".format(error))
+			return False
+
+	def updateSmartphone(self, uid, smartphoneDescription, smartphoneHostname, useSmartphoneIP):
+		try:
+			self._cursor.execute("""UPDATE Smartphone SET SmartphoneDescription=%s, SmartphoneHostname=%s, UseSmartphoneIP=%s WHERE UID=%s""", (smartphoneDescription,smartphoneHostname,useSmartphoneIP,uid))
 			self._mariadb_connection.commit()
 			return True
 		except mariadb.Error as error:
