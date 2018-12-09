@@ -23,6 +23,7 @@ class USERHANDLER:
 
 	def getNfcAccess(self, user):
 		ip = None
+		entrar = None
 		try:
 			self._cursor.execute("SELECT Username, MasterHomeHostname, Attached FROM User WHERE Username=%s", (user,))
 			for userDatabase, homeHostameDatabase, attachedDatabase in self._cursor:
@@ -31,11 +32,13 @@ class USERHANDLER:
 				if(attachedDatabase == 0):
 					self._addIp(user, homeHostameDatabase)
 					audioHandler.audio('Bienvenido a casa. '+user)
+					entrar = True
 				if(attachedDatabase == 1):
-					self.logout(user)
+					self.logoutHome(user)
 					audioHandler.audio('Hasta pronto '+user+' que tenga un buen día')
+					entrar = False
 
-			return user, ip
+			return user, ip, entrar
 		except mariadb.Error as error:
 			print(str(error))
 			print('NFC access denied')
@@ -45,6 +48,7 @@ class USERHANDLER:
 		ip = None
 		user = None
 		descrption = None
+		entrar = None
 		try:
 			self._cursor.execute("SELECT u.Username, u.MasterHomeHostname, u.Attached, s.SmartphoneDescription, s.SmartphoneHostname, s.UseSmartphoneIP FROM User AS u INNER JOIN User2Smartphone AS u2s ON u.IdUser=u2s.IdUser INNER JOIN Smartphone AS s ON u2s.IdSmartphone=s.IdSmartphone WHERE s.UID=%s", (uid,))
 			for userDatabase, homeHostameDatabase, attachedDatabase, smartphoneDescriptionDatabase, smartphoneHostnameDatabase, useSmartphoneIPDatabase in self._cursor:
@@ -56,10 +60,12 @@ class USERHANDLER:
 				if(attachedDatabase == 0):
 					self._addIp(user, ip)
 					audioHandler.audio('Bienvenido a casa. '+userDatabase)
+					entrar = True
 				elif(attachedDatabase == 1):
-					self.logout(user)
+					self.logoutHome(user)
 					audioHandler.audio('Hasta pronto '+userDatabase+'. que tenga un buen día')
-			return user, ip
+					entrar = False
+			return user, ip, entrar
 		except mariadb.Error as error:
 			print(str(error))
 			print('NFC access denied')
@@ -135,6 +141,10 @@ class USERHANDLER:
 
 	def logout(self, user):
 		self._cursor.execute("""UPDATE User SET ClientHostname=%s WHERE Username=%s""", (None, user))
+		self._mariadb_connection.commit()
+
+	def logoutHome(self, user):
+		self._cursor.execute("""UPDATE User SET ClientHostname=%s, Attached=%s WHERE Username=%s""", (None, 0, user))
 		self._mariadb_connection.commit()
 
 	def countDevicesAtHome(self):

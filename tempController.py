@@ -73,7 +73,7 @@ def robotStateChange(kill, persona=None):
 	global temp
 	global mode
 	global killAlarm
-	print('Temperatura: '+str(temp)+' -- '+'modo: '+mode+' --- ')
+	#print('Temperatura: '+str(temp)+' -- '+'modo: '+str(mode)+' --- ')
 
 	wEvent = open("eventos.txt", "a") #var to write events
 	fileH = fileHandler.FILEHANDLER()
@@ -110,8 +110,22 @@ def robotStateChange(kill, persona=None):
 		wEvent.write(format(datetime.datetime.now())+"\tAlarma desactivada\n")
 		killAlarm.set()
 		noti.sendNotification('La alarma ha sido desactivada. '+str(datetime.datetime.now()), bot, telGroup)
-
-
+	elif collected == 'x00x08':
+		print('*NOTIFICAR ENTRADA CON TARJETA*')
+		wEvent.write(format(datetime.datetime.now())+"\t"+persona+" ha entrado a casa con tarjeta NFC\n")
+		noti.sendNotification(persona+' ha entrado en casa con tarjeta nfc. '+str(datetime.datetime.now()), bot, telGroup)
+	elif collected == 'x00x09':
+		print('*NOTIFICAR SALIDA CON TARJETA*')
+		wEvent.write(format(datetime.datetime.now())+"\t"+persona+" ha salido de casa con tarjeta NFC\n")
+		noti.sendNotification(persona+' ha salido de casa con tarjeta nfc. '+str(datetime.datetime.now()), bot, telGroup)
+	elif collected == 'x00x0A':
+		print('*NOTIFICAR ENTRADA CON SMARTP*')
+		wEvent.write(format(datetime.datetime.now())+"\t"+persona+" ha entrado a casa con smartphone\n")
+		noti.sendNotification(persona+' ha entrado a casa con smartphone. '+str(datetime.datetime.now()), bot, telGroup)
+	elif collected == 'x00x0B':
+		print('*NOTIFICAR SALIDA CON SMARTP*')
+		wEvent.write(format(datetime.datetime.now())+"\t"+persona+" ha salido de casa con smartphone\n")
+		noti.sendNotification(persona+' ha salido de casa con smartphone. '+str(datetime.datetime.now()), bot, telGroup)
 	wEvent.close()
 	#reset collected data
 	collected = None
@@ -296,12 +310,16 @@ def servWebThread(cond, kill):
 		print('webNO instancado')
 
 def nfcThread(cond, kill):
-	global serverweb
-	Read.read(webSensor)
+	global serverwebgl
+	global collected
+	while(not kill.is_set()):
+		collected, user = Read.read(webSensor)
+		robotStateChange(None,user)
 
 def voiceThread(cond, kill):
 	global sensor
 	micHandlerTest.recognizer(sensor)
+		
 
 mode = None
 temp = None
@@ -317,6 +335,10 @@ x00x04 --> change from manual to auto with telegram
 x00x05 --> kill the program
 x00x06 --> alarm activation
 x00x07 --> alarm deactivation
+x00x08 --> NFC entrance
+x00x09 --> NFC exit
+x00x0A --> Smartphone entrance
+x00x0B --> Smartphone exit
 '''
 collected = None
 led = LED(18) #GPIO

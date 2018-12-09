@@ -11,17 +11,23 @@ import userHandler
 import dataHandler
 import fileHandler
 import threading
+from MFRC522python import Write, Read
 from cameraHandlerTest import Camera
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret'
 socketio = SocketIO(app)
+currentTagSocketio = None
+currentSmartphoneSocketio = None
+killTagThread = None
 p = None #Proxy as global variable
 #vH = cameraHandler.CAMERAHANDLER() #video handler
 usersLogged = {} #dictionary with users currently logged
 timers = {}
 uid = None
-
+tag = None
+tagEscrita = False
+tagThread = None
 #callback function for timeout
 def logoutUser(*args):
 	global usersLogged
@@ -134,7 +140,20 @@ def nfcAddUserList(user, ip):
 def envioNFC_UID(uidFromReader):
 	global uid
 	uid = uidFromReader
-	print('WebServer: obtenido uid del movil'+uid)
+	print('WebServer: obtenido uid del movil' + uid)
+
+
+def writeTagThread(kill):
+	global tag
+	global tagEscrita
+	global killTagThread
+	while (not killTagThread.is_set()):
+		print('writeTagThread: Tag que quiero : '+ str(tag))
+		tagEscrita = Write.writeTag(tag)
+		time.sleep(1)
+		print('Tag escrita por el hilo: '+ str(tag))
+
+
 
 class WEBSENSOR:			
 	def nfcLogoutUserList():
@@ -466,6 +485,12 @@ class WEBSENSOR:
 		else:
 			return redirect('/')
 
+	def envioSocket(ip, puerto, datos):
+		s = socket.socket()
+		s.connect((ip, puerto))
+		s.send(datos)
+		s.close()
+
 	@app.route('/menu/calefaccion/fin')
 	def finPrograma():
 		global usersLogged
@@ -530,10 +555,39 @@ class WEBSENSOR:
 			print(str(usersLogged))
 		return render_template("register.html", accessGranted=accessGranted)
 
+	@app.route('/menu/menuNFC', methods = ['POST', 'GET'])
+	def menunfc():
+		global usersLogged
+		if request.remote_addr in usersLogged:
+			resetTimeout(request.remote_addr)
+			return render_template('menuNFC.html')
+		else:
+			return redirect('/')
+
+
+
+	@app.route('/menu/menuNFC/writetag', methods = ['POST', 'GET'])
+	def writeTag():
+		global usersLogged
+		global killTagThread
+		global tagThread
+		if request.remote_addr in usersLogged:
+			resetTimeout(request.remote_addr)
+			tag = usersLogged[request.remote_addr]
+			print('Escribir etiqueta para el usuario'+str(tag))
+			killTagThread = threading.Event()
+			tagThread = threading.Thread(target=writeTagThread, args=(killTagThread,))
+			return render_template('tag.html', tag=tag)
+		else:
+			return redirect('/')
+
 	#Asociar smartphone
-	@app.route('/menu/asociarSmartphone', methods = ['POST', 'GET'])
+	@app.route('/menu/menuNFC/asociarSmartphone', methods = ['POST', 'GET'])
 	def asociarSmartphone():
 		global usersLogged
+		global uid
+		uid = None
+		Read.changeEnableRegister(False)
 		accessGranted = False
 		mensaje = None
 		if request.remote_addr in usersLogged:
@@ -619,13 +673,15 @@ class WEBSENSOR:
 	@socketio.on('requestUIDtoServer')
 	def envio(lectura):
 		global uid
+		global currentSmartphoneSocketio
+		currentSmartphoneSocketio = request.sid
 		templateData = {}
 		if(uid != None):
 			print('UID listo para enviar'+uid)
 			auxuid = uid
 			uid = None
 			try:
-				templateData = { 'uid' : auxuid, 'hola' : True }
+				templateData = { 'uid' : auxuid }
 				time.sleep(0.5)
 				
 			except Exception as e:
@@ -633,6 +689,48 @@ class WEBSENSOR:
 				print(str(e))
 		socketio.emit('recibirUID', templateData)
 
+
+	@socketio.on('requestTagtoServer')
+	def enviotag(taghtml):
+		global currentTagSocketio
+		global tag
+		global tagEscrita
+		global tagThread
+		tag = taghtml
+		print('ServerWeb tag a escribir: '+str(tag))
+		if(not tagThread.isAlive()):
+			tagThread.start()
+		currentTagSocketio = request.sid
+		templateData = {}
+		Read.changeStopped(True)
+		try:
+			templateData = { 'tag' : tag }
+			if(tagEscrita == True):
+				templateData = { 'tag' : tag, 'tagEscrita' : True }
+				print('ServerWeb: tag escrita con exito: '+str(tag))	
+				killTagThread.set()
+				tagThread.join()
+				Read.changeStopped(False)
+		except Exception as e:
+			print('error de emit al html')
+			print(str(e))
+		time.sleep(0.5)
+		socketio.emit('recibirTag', templateData)
+
+	@socketio.on('disconnect')
+	def disconnection():
+		global currentTagSocketio
+		global currentSmartphoneSocketio
+		global killTagThread
+		global tagEscrita
+		global tagThread
+		print('******DESCONEXION******* de:'+str(request.sid))
+		if(currentSmartphoneSocketio == request.sid):
+			print("*_*_*_*cierre socket de smartphone asociacion")
+			Read.changeEnableRegister(True)
+		elif(currentTagSocketio == request.sid):
+			print("*_*_*_*cierre socket de tag")
+			tagEscrita = False
 	#END REAL-TIME READING
 
 	
