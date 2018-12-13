@@ -4,7 +4,7 @@ import audioHandler
 r = sr.Recognizer()
 #r.energy_threshold = 500
 #r.dynamic_energy_threshold = False
-r.pause_threshold = 0.6
+#r.pause_threshold = 0.7
 assitantName = 'asistente'
 def recognizer(sensor):
 	while True:
@@ -28,8 +28,7 @@ def recognizer(sensor):
 			    	audioHandler.playTurnOffCalefaccion()
 			    elif(any(word in transcripton for word in ['buenos días', 'hola', 'qué tal'])):
 			    	audioHandler.playGoodMorning()
-			    elif(any(word in transcripton for word in ['temperatura', 'grados'])):
-			    	
+			    elif(any(word in transcripton for word in ['temperatura', 'grados'])):  	
 			    	audioHandler.playTemperature(sensor.leerTem())
 			    elif('humedad' in transcripton):
 			    	audioHandler.playHumidity(sensor.leerHume())

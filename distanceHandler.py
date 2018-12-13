@@ -3,7 +3,7 @@ from time import sleep
 
 class DISTANCEHANDLER:
 	def __init__(self):
-		self._sensor = DistanceSensor(23,24, max_distance=4)
+		self._sensor = DistanceSensor(15,14, max_distance=4)
 
 	def distance(self):
 		try:

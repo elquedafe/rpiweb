@@ -574,7 +574,7 @@ class WEBSENSOR:
 		if request.remote_addr in usersLogged:
 			resetTimeout(request.remote_addr)
 			tag = usersLogged[request.remote_addr]
-			print('Escribir etiqueta para el usuario'+str(tag))
+			print('Escribir etiqueta para el usuario: '+str(tag))
 			killTagThread = threading.Event()
 			tagThread = threading.Thread(target=writeTagThread, args=(killTagThread,))
 			return render_template('tag.html', tag=tag)
@@ -671,7 +671,7 @@ class WEBSENSOR:
 			return redirect('/')
 
 	@socketio.on('requestUIDtoServer')
-	def envio(lectura):
+	def envioNFCSmartphone(lectura):
 		global uid
 		global currentSmartphoneSocketio
 		currentSmartphoneSocketio = request.sid
